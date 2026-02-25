@@ -5,49 +5,49 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-# ✅ version stamp so we can verify deploy instantly
-EL_VERSION = "El-v2-personality"
+EL_VERSION = "el-v3-welcome"
 
 @app.get("/")
 def home():
-    return f"OK ({EL_VERSION})", 200
+    return "OK", 200
 
 @app.get("/health")
 def health():
     return jsonify({"ok": True, "version": EL_VERSION}), 200
+
+def build_welcome_message():
+    # Placeholder sections (we’ll wire real events next)
+    return (
+        "Hi, I’m El — your insider for everything happening around the MOV.\n\n"
+        "✨ **Today’s Highlights**\n"
+        "• (coming next: pulled from your events feed)\n\n"
+        "📅 **This Weekend**\n"
+        "• (coming next: top weekend picks)\n\n"
+        "🔥 **Trending Right Now**\n"
+        "• (coming next: what people are clicking + popular categories)\n\n"
+        "Tell me what kind of vibe you’re looking for — music, family fun, nightlife, chill, food, sports — and I’ll point you to what’s going on."
+    )
 
 def handle_chat():
     data = request.get_json(silent=True) or {}
     msg = (data.get("message") or "").strip()
 
     if not msg:
-        return jsonify({"message": "Message is required", "version": EL_VERSION}), 400
+        return jsonify({"message": "Message is required"}), 400
+
+    # ✅ Special auto-welcome trigger
+    if msg == "__WELCOME__":
+        return jsonify({"message": build_welcome_message()}), 200
 
     user_msg = msg.lower()
 
-    intro = (
-        "Hi, I’m El — your insider for everything happening around the MOV. "
-        "Tell me what kind of vibe you're looking for and I’ll point you to what’s going on."
-    )
-
+    # Simple starter logic (we’ll replace with real event search)
     if any(word in user_msg for word in ["hi", "hello", "hey"]):
-        reply = intro
-    elif "weekend" in user_msg:
-        reply = "Looking for something this weekend? Music, family fun, nightlife, or something chill?"
-    elif "music" in user_msg:
-        reply = "Live music is always happening around the MOV. Want something laid-back, high-energy, or all-ages?"
-    elif "kids" in user_msg or "family" in user_msg:
-        reply = "Got it — family vibe. I’ll start pulling together the best kid-friendly and family events around the MOV."
-    elif "date" in user_msg:
-        reply = "Nice 😏 Looking for classy, casual, outdoors, or something unique for date night?"
-    else:
-        reply = (
-            "Tell me what you're in the mood for — live music, food, family fun, nightlife, "
-            "art, or something totally different — and I’ll guide you."
-        )
+        return jsonify({"message": build_welcome_message()}), 200
 
-    return jsonify({"message": reply, "version": EL_VERSION}), 200
+    return jsonify({"message": f"✅ El is connected. You said: {msg}"}), 200
 
+# ✅ Accept BOTH URLs so WP never 404s
 @app.post("/chat")
 def chat():
     return handle_chat()
