@@ -1,9 +1,8 @@
 import os
-import re
 import json
 import time
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 import requests
 from bs4 import BeautifulSoup
@@ -14,341 +13,260 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+# ----------------------------
+# Config
+# ----------------------------
 EL_NAME = "El"
 CACHE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
-
-HEADERS = {
-    "User-Agent": "SpliceElBot/1.0 (+https://splice.social)"
-}
+USER_AGENT = "SpliceEventBot/1.0 (+https://splice.social)"
 
 SOURCES = [
-    {
-        "name": "The Adelphia",
-        "category": "music",
-        "urls": ["https://www.theadelphia.com/events/"],
-    },
-    {
-        "name": "Greater Parkersburg",
-        "category": "community",
-        "urls": ["https://www.greaterparkersburg.com/events/"],
-    },
-    {
-        "name": "Parkersburg Art Center",
-        "category": "arts",
-        "urls": [
-            "http://parkersburgartcenter.org/exhibits",
-            "https://www.parkersburgartcenter.org/upcomingcurrent-events",
-            "https://www.parkersburgartcenter.org/adult-and-teen-classes",
-            "https://www.parkersburgartcenter.org/children-and-family-classes",
-            "https://www.parkersburgartcenter.org/camp-creativity",
-        ],
-    },
+    {"name": "The Adelphia", "url": "https://www.theadelphia.com/events/"},
+    {"name": "Greater Parkersburg", "url": "https://www.greaterparkersburg.com/events/"},
+    {"name": "Parkersburg Art Center", "url": "https://www.parkersburgartcenter.org/upcomingcurrent-events"},
 ]
 
-# In-memory cache (good enough for v1 MVP)
-CACHE = {
+_cache: Dict[str, Any] = {
     "ts": 0,
     "events": [],
-    "errors": []
 }
 
 
 # ----------------------------
-# Utilities
+# Helpers
 # ----------------------------
-MONTH_RE = re.compile(r"\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b", re.I)
-DATEISH_RE = re.compile(r"\b(\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?)\b")
+def now_utc() -> datetime:
+    return datetime.now(timezone.utc)
 
-def now_local() -> datetime:
-    # server time is fine for MVP; if you want strict ET later we’ll add pytz/zoneinfo
-    return datetime.now()
 
-def safe_parse_date(text: str) -> Optional[datetime]:
-    t = (text or "").strip()
-    if not t:
-        return None
-    # Heuristic: only try parsing if it looks date-like
-    if not (MONTH_RE.search(t) or DATEISH_RE.search(t) or re.search(r"\b\d{4}\b", t)):
-        return None
+def fetch_html(url: str) -> str:
+    r = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=20)
+    r.raise_for_status()
+    return r.text
+
+
+def safe_json_loads(s: str) -> Optional[Any]:
     try:
-        return dtparser.parse(t, fuzzy=True, default=now_local())
+        return json.loads(s)
     except Exception:
         return None
 
-def weekend_range(base: datetime) -> (datetime, datetime):
-    # Next Sat/Sun relative to today
-    # weekday: Mon=0 ... Sun=6
-    days_until_sat = (5 - base.weekday()) % 7
-    sat = (base + timedelta(days=days_until_sat)).replace(hour=0, minute=0, second=0, microsecond=0)
-    sun = (sat + timedelta(days=1)).replace(hour=23, minute=59, second=59, microsecond=0)
-    return sat, sun
 
-def event_key(e: Dict) -> str:
-    return f"{e.get('source','')}|{e.get('title','')}|{e.get('start','')}|{e.get('url','')}"
+def flatten_jsonld(obj: Any) -> List[Dict[str, Any]]:
+    """
+    JSON-LD can be:
+      - dict
+      - list
+      - dict with @graph
+    Return list of dict nodes.
+    """
+    nodes: List[Dict[str, Any]] = []
 
-def normalize_event(title: str, start: Optional[datetime], url: str, source: str, category: str, raw_date_text: str = "") -> Dict:
-    return {
-        "title": (title or "").strip(),
-        "start": start.isoformat() if start else None,
-        "date_text": raw_date_text.strip(),
-        "url": url,
-        "source": source,
-        "category": category,
-    }
+    def walk(x: Any):
+        if isinstance(x, dict):
+            if "@graph" in x and isinstance(x["@graph"], list):
+                for g in x["@graph"]:
+                    walk(g)
+            else:
+                nodes.append(x)
+        elif isinstance(x, list):
+            for item in x:
+                walk(item)
+
+    walk(obj)
+    return [n for n in nodes if isinstance(n, dict)]
 
 
-# ----------------------------
-# Scraping helpers
-# ----------------------------
-def fetch_html(url: str) -> str:
-    resp = requests.get(url, headers=HEADERS, timeout=20)
-    resp.raise_for_status()
-    return resp.text
+def is_event_node(n: Dict[str, Any]) -> bool:
+    t = n.get("@type")
+    if isinstance(t, list):
+        return any(str(x).lower() == "event" for x in t)
+    return str(t).lower() == "event"
 
-def parse_jsonld_events(html: str, source: str, category: str) -> List[Dict]:
-    """Many event sites include schema.org JSON-LD with @type: Event."""
-    out = []
+
+def parse_datetime_smart(dt_str: str) -> Optional[datetime]:
+    """
+    Parse dt string; return timezone-aware UTC datetime if possible.
+    If dt is naive, assume it's local-ish and convert to UTC by attaching UTC (good enough for filtering past/future).
+    If year missing, infer next occurrence.
+    """
+    if not dt_str:
+        return None
+
+    # Some JSON-LD provides ISO with timezone; dateutil handles it.
+    try:
+        parsed = dtparser.parse(dt_str)
+    except Exception:
+        return None
+
+    # If no tz info, attach UTC (keeps ordering consistent).
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    # If date string had no year, dateutil will still pick something; we enforce "next occurrence" rule:
+    # If parsed is in the past, bump +1 year until it's in the future (max 2 bumps).
+    n = now_utc()
+    bumped = parsed
+    for _ in range(2):
+        if bumped >= n:
+            break
+        bumped = bumped.replace(year=bumped.year + 1)
+
+    return bumped.astimezone(timezone.utc)
+
+
+def normalize_location(loc: Any) -> str:
+    # JSON-LD location may be string or object
+    if isinstance(loc, str):
+        return loc.strip()
+    if isinstance(loc, dict):
+        name = loc.get("name") or ""
+        addr = loc.get("address") or ""
+        if isinstance(addr, dict):
+            parts = [
+                addr.get("streetAddress", ""),
+                addr.get("addressLocality", ""),
+                addr.get("addressRegion", ""),
+            ]
+            addr_str = ", ".join([p for p in parts if p])
+        else:
+            addr_str = str(addr) if addr else ""
+        return " — ".join([p for p in [name.strip(), addr_str.strip()] if p])
+    return ""
+
+
+def extract_events_from_jsonld(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
     scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
+    events: List[Dict[str, Any]] = []
+
     for s in scripts:
-        txt = (s.string or "").strip()
-        if not txt:
+        raw = (s.string or "").strip()
+        if not raw:
             continue
-        try:
-            data = json.loads(txt)
-        except Exception:
+        data = safe_json_loads(raw)
+        if data is None:
             continue
 
-        # JSON-LD can be object, list, or graph
-        nodes = []
-        if isinstance(data, list):
-            nodes = data
-        elif isinstance(data, dict):
-            if "@graph" in data and isinstance(data["@graph"], list):
-                nodes = data["@graph"]
-            else:
-                nodes = [data]
-
+        nodes = flatten_jsonld(data)
         for node in nodes:
-            if not isinstance(node, dict):
-                continue
-            t = node.get("@type") or node.get("type")
-            if isinstance(t, list):
-                is_event = any(str(x).lower() == "event" for x in t)
-            else:
-                is_event = str(t).lower() == "event"
-            if not is_event:
+            if not is_event_node(node):
                 continue
 
-            title = node.get("name") or ""
-            start_raw = node.get("startDate") or ""
-            url = node.get("url") or ""
-            start_dt = None
-            try:
-                if start_raw:
-                    start_dt = dtparser.parse(start_raw)
-            except Exception:
-                start_dt = None
+            title = (node.get("name") or "").strip()
+            start = node.get("startDate") or node.get("start_date") or ""
+            end = node.get("endDate") or ""
+            event_url = node.get("url") or source_url
 
-            if title and url:
-                out.append(normalize_event(title, start_dt, url, source, category, raw_date_text=start_raw))
-    return out
+            start_dt = parse_datetime_smart(str(start))
+            end_dt = parse_datetime_smart(str(end)) if end else None
 
-def parse_basic_event_links(html: str, base_url: str, source: str, category: str) -> List[Dict]:
-    """
-    Fallback parser:
-    - pulls links that have date-ish text nearby
-    - works surprisingly well for MVP, but source-specific parsers can be added later.
-    """
-    soup = BeautifulSoup(html, "html.parser")
-    out = []
+            loc = normalize_location(node.get("location"))
 
-    # Candidate blocks: list items, cards, article blocks
-    candidates = soup.find_all(["article", "li", "div", "section"], limit=2000)
+            if not title or not start_dt:
+                continue
 
-    for block in candidates:
-        a = block.find("a", href=True)
-        if not a:
-            continue
+            events.append(
+                {
+                    "title": title,
+                    "start_dt": start_dt.isoformat(),
+                    "end_dt": end_dt.isoformat() if end_dt else None,
+                    "location": loc,
+                    "source": source_name,
+                    "url": event_url,
+                }
+            )
 
-        title = a.get_text(" ", strip=True)
-        href = a["href"].strip()
-        if not title or len(title) < 4:
-            continue
-
-        # make absolute url
-        if href.startswith("/"):
-            url = base_url.rstrip("/") + href
-        elif href.startswith("http"):
-            url = href
-        else:
-            url = base_url.rstrip("/") + "/" + href.lstrip("/")
-
-        text = block.get_text(" ", strip=True)
-        # find a short date-ish snippet
-        start_dt = safe_parse_date(text)
-        if not start_dt:
-            continue
-
-        out.append(normalize_event(title, start_dt, url, source, category, raw_date_text=text))
-
-    # de-dupe
-    uniq = {}
-    for e in out:
-        uniq[event_key(e)] = e
-    return list(uniq.values())
+    # If JSON-LD missing, return empty; we can add HTML fallbacks later per-site.
+    return events
 
 
-def scrape_source(source_cfg: Dict) -> (List[Dict], List[str]):
-    events = []
-    errors = []
-    for url in source_cfg["urls"]:
-        try:
-            html = fetch_html(url)
-
-            # Try JSON-LD first (best)
-            got = parse_jsonld_events(html, source_cfg["name"], source_cfg["category"])
-
-            # Fallback
-            if not got:
-                base = re.match(r"^(https?://[^/]+)", url)
-                base_url = base.group(1) if base else url
-                got = parse_basic_event_links(html, base_url, source_cfg["name"], source_cfg["category"])
-
-            events.extend(got)
-        except Exception as e:
-            errors.append(f"{source_cfg['name']} ({url}): {str(e)}")
-
-    # de-dupe across urls
-    uniq = {}
-    for e in events:
-        uniq[event_key(e)] = e
-    return list(uniq.values()), errors
-
-
-# ----------------------------
-# Cache + selection logic
-# ----------------------------
-def refresh_cache_if_needed(force: bool = False):
-    now_ts = time.time()
-    if not force and (now_ts - CACHE["ts"] < CACHE_TTL_SECONDS) and CACHE["events"]:
+def refresh_cache_if_needed(force: bool = False) -> None:
+    ts = _cache.get("ts", 0) or 0
+    if not force and (time.time() - ts) < CACHE_TTL_SECONDS and _cache.get("events"):
         return
 
-    all_events = []
-    all_errors = []
-
+    all_events: List[Dict[str, Any]] = []
     for src in SOURCES:
-        evs, errs = scrape_source(src)
-        all_events.extend(evs)
-        all_errors.extend(errs)
+        try:
+            html = fetch_html(src["url"])
+            extracted = extract_events_from_jsonld(html, src["name"], src["url"])
+            all_events.extend(extracted)
+        except Exception:
+            # Keep going if one source fails
+            continue
 
-    # keep only upcoming-ish events (past ones get noisy)
-    now_dt = now_local()
-    upcoming = []
+    # Filter to future-only
+    n = now_utc()
+    filtered: List[Dict[str, Any]] = []
     for e in all_events:
-        if not e.get("start"):
-            continue
         try:
-            dt = dtparser.parse(e["start"])
+            sd = dtparser.isoparse(e["start_dt"])
+            if sd.tzinfo is None:
+                sd = sd.replace(tzinfo=timezone.utc)
+            if sd >= n:
+                filtered.append(e)
         except Exception:
             continue
-        if dt >= (now_dt - timedelta(hours=6)):
-            upcoming.append(e)
 
-    # sort by start time
-    upcoming.sort(key=lambda x: x.get("start") or "")
+    # Sort by soonest
+    filtered.sort(key=lambda x: x["start_dt"])
 
-    CACHE["ts"] = now_ts
-    CACHE["events"] = upcoming
-    CACHE["errors"] = all_errors
+    _cache["ts"] = time.time()
+    _cache["events"] = filtered
 
 
-def select_today(events: List[Dict], base: datetime) -> List[Dict]:
-    start = base.replace(hour=0, minute=0, second=0, microsecond=0)
-    end = base.replace(hour=23, minute=59, second=59, microsecond=0)
-    out = []
-    for e in events:
-        try:
-            dt = dtparser.parse(e["start"])
-        except Exception:
-            continue
-        if start <= dt <= end:
-            out.append(e)
-    return out[:6]
-
-def select_weekend(events: List[Dict], base: datetime) -> List[Dict]:
-    sat, sun = weekend_range(base)
-    out = []
-    for e in events:
-        try:
-            dt = dtparser.parse(e["start"])
-        except Exception:
-            continue
-        if sat <= dt <= sun:
-            out.append(e)
-    return out[:8]
-
-def format_event_line(e: Dict) -> str:
-    try:
-        dt = dtparser.parse(e["start"]) if e.get("start") else None
-        when = dt.strftime("%a %b %-d, %-I:%M %p") if dt else "TBD"
-    except Exception:
-        when = "TBD"
-    return f"• {e.get('title','').strip()} — {when} ({e.get('source')})"
-
-
-def welcome_message(events: List[Dict]) -> str:
-    base = now_local()
-    today = select_today(events, base)
-    weekend = select_weekend(events, base)
+def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
+    if not events:
+        return "I’m not seeing any clean upcoming events from my current sources yet. Try **music**, **art**, **classes**, or **this weekend**."
 
     lines = []
-    lines.append(f"Hi, I’m {EL_NAME} — your insider for everything happening around the MOV.\n")
-
-    lines.append("✨ **Today’s Highlights**")
-    if today:
-        lines.extend([format_event_line(e) for e in today])
-    else:
-        lines.append("• No solid “today” hits found yet — ask me for *this weekend* or *live music* and I’ll pull what’s coming up.")
-
-    lines.append("\n📅 **This Weekend**")
-    if weekend:
-        lines.extend([format_event_line(e) for e in weekend])
-    else:
-        lines.append("• Weekend list is still warming up — try: “music this weekend” or “family events this weekend”")
-
-    lines.append("\nTell me what kind of vibe you’re looking for: **music, family, art, classes, shows, date night, free stuff**…")
+    for e in events[:limit]:
+        sd = dtparser.isoparse(e["start_dt"]).astimezone(timezone.utc)
+        nice = sd.strftime("%a %b %d, %I:%M %p UTC")
+        loc = f" ({e['location']})" if e.get("location") else ""
+        lines.append(f"• **{e['title']}** — {nice}{loc}\n  _Source: {e['source']}_")
     return "\n".join(lines)
 
 
-def answer_query(user_text: str, events: List[Dict]) -> str:
-    t = (user_text or "").lower()
-    base = now_local()
+def classify_query(msg: str) -> str:
+    m = msg.lower()
+    if any(k in m for k in ["music", "live music", "band", "concert", "show"]):
+        return "music"
+    if any(k in m for k in ["art", "exhibit", "gallery"]):
+        return "art"
+    if any(k in m for k in ["class", "classes", "workshop", "camp"]):
+        return "classes"
+    if any(k in m for k in ["weekend", "this weekend", "friday", "saturday", "sunday"]):
+        return "weekend"
+    if any(k in m for k in ["today", "tonight"]):
+        return "today"
+    return "general"
 
-    # quick intent filters
-    if "today" in t:
-        picks = select_today(events, base)
-        if not picks:
-            return "I’m not seeing strong “today” items yet from the sources — want *this weekend* or *music*?"
-        return "✨ **Today**\n" + "\n".join(format_event_line(e) for e in picks)
 
-    if "weekend" in t:
-        picks = select_weekend(events, base)
-        if not picks:
-            return "Weekend is quiet in the feed right now — want me to search *music* or *art classes* instead?"
-        return "📅 **This Weekend**\n" + "\n".join(format_event_line(e) for e in picks)
+def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str, Any]]:
+    if intent == "general":
+        return events
 
-    # category hints
-    if any(k in t for k in ["art", "exhibit", "gallery", "class", "camp"]):
-        picks = [e for e in events if e.get("source") == "Parkersburg Art Center"]
-        return "🎨 **Parkersburg Art Center**\n" + "\n".join(format_event_line(e) for e in picks[:10]) if picks else "I’m not pulling Art Center items yet — I’ll keep refreshing the feed."
+    # Very simple keyword filtering for now (we’ll improve this once we confirm each site’s data quality).
+    keywords = {
+        "music": ["music", "concert", "band", "live", "show"],
+        "art": ["art", "exhibit", "gallery"],
+        "classes": ["class", "workshop", "camp", "lesson"],
+        "weekend": [],  # weekend filtering is date-based; we’ll add later
+        "today": [],    # today filtering is date-based; we’ll add later
+    }
 
-    if any(k in t for k in ["music", "band", "concert", "live"]):
-        picks = [e for e in events if e.get("source") in ["The Adelphia"]]
-        return "🎸 **Live Music / Adelphia**\n" + "\n".join(format_event_line(e) for e in picks[:10]) if picks else "I’m not seeing music items yet — I’ll keep refreshing."
+    ks = keywords.get(intent, [])
+    if not ks:
+        return events
 
-    # default
-    return "Tell me: **today**, **this weekend**, **music**, **art**, **classes**, **family**, or **date night** — and I’ll pull the best matches."
+    out = []
+    for e in events:
+        t = (e.get("title") or "").lower()
+        if any(k in t for k in ks):
+            out.append(e)
+    return out
 
 
 # ----------------------------
@@ -358,47 +276,57 @@ def answer_query(user_text: str, events: List[Dict]) -> str:
 def home():
     return "OK", 200
 
+
 @app.get("/health")
 def health():
-    refresh_cache_if_needed(force=False)
-    return jsonify({
-        "ok": True,
-        "cached": bool(CACHE["events"]),
-        "cache_age_seconds": int(time.time() - CACHE["ts"]) if CACHE["ts"] else None,
-        "event_count": len(CACHE["events"]),
-        "errors_count": len(CACHE["errors"]),
-    }), 200
+    refresh_cache_if_needed()
+    return jsonify({"ok": True, "events_cached": len(_cache.get("events", []))}), 200
 
-@app.get("/events")
-def events():
-    refresh_cache_if_needed(force=False)
-    return jsonify({
-        "events": CACHE["events"],
-        "errors": CACHE["errors"],
-        "cache_age_seconds": int(time.time() - CACHE["ts"]) if CACHE["ts"] else None,
-    }), 200
 
 def handle_chat():
-    refresh_cache_if_needed(force=False)
-
     data = request.get_json(silent=True) or {}
     msg = (data.get("message") or "").strip()
 
     if not msg:
         return jsonify({"message": "Message is required"}), 400
 
-    if msg == "__WELCOME__":
-        return jsonify({"message": welcome_message(CACHE["events"])}), 200
+    # Always ensure cache is warm
+    refresh_cache_if_needed()
 
-    return jsonify({"message": answer_query(msg, CACHE["events"])}), 200
+    intent = classify_query(msg)
+    events = _cache.get("events", [])
+    scoped = filter_by_intent(events, intent)
 
+    # Intro / landing response
+    if msg.lower() in ["hi", "hello", "hey"]:
+        return jsonify(
+            {
+                "message": (
+                    f"Hi, I’m {EL_NAME} — your insider for everything happening around the MOV.\n\n"
+                    "✨ **Today’s Highlights**\n"
+                    "• (warming up from live sources)\n\n"
+                    "📅 **This Weekend**\n"
+                    "• Try: “music this weekend” or “family events”\n\n"
+                    "Tell me what kind of vibe you’re looking for: **music, family, art, classes, shows, date night, free stuff**."
+                )
+            }
+        ), 200
+
+    # Main event answer
+    reply = format_events(scoped, limit=6)
+    return jsonify({"message": reply}), 200
+
+
+# ✅ Accept BOTH URLs so WP never 404s
 @app.post("/chat")
 def chat():
     return handle_chat()
 
+
 @app.post("/el-chat/chat")
 def el_chat_chat():
     return handle_chat()
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "10000"))
