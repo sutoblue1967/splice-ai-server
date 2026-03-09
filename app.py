@@ -217,20 +217,21 @@ def refresh_cache_if_needed(force: bool = False) -> None:
         return
 
     all_events: List[Dict[str, Any]] = []
-    for src in SOURCES:
-        try:
-            html = fetch_html(src["url"])
-            extracted = extract_events_from_jsonld(html, src["name"], src["url"])
+for src in SOURCES:
+    try:
+        html = fetch_html(src["url"])
 
-# If JSON-LD didn't return anything, try HTML scraping
-if not extracted:
-    extracted = extract_events_from_html(html, src["name"], src["url"])
+        extracted = extract_events_from_jsonld(html, src["name"], src["url"])
 
-all_events.extend(extracted)
+        # fallback if JSON-LD returns nothing
+        if not extracted:
+            extracted = extract_events_from_html(html, src["name"], src["url"])
 
-        except Exception:
-            # Keep going if one source fails
-            continue
+        all_events.extend(extracted)
+
+    except Exception:
+        # Keep going if one source fails
+        continue
 
     # Filter to future-only
     n = now_utc()
