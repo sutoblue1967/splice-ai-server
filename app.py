@@ -139,7 +139,7 @@ def extract_events_from_html(html: str, source_name: str, source_url: str):
     events = []
 
     # Try common event containers
-    cards = soup.find_all(["article", "div", "li"])
+    cards = soup.select("h2, h3, .event-title")
 
     for c in cards:
         text = c.get_text(" ", strip=True)
