@@ -138,28 +138,26 @@ def extract_events_from_html(html: str, source_name: str, source_url: str):
     soup = BeautifulSoup(html, "html.parser")
     events = []
 
-    # Try common event containers
-    cards = soup.select("h2, h3, .event-title")
+    links = soup.find_all("a", href=True)
 
-    for c in cards:
-        text = c.get_text(" ", strip=True)
+    for link in links:
+        href = link["href"]
 
-        if len(text) < 20:
-            continue
+        if "/event" in href or "/events" in href:
+            title = link.get_text(strip=True)
 
-        # crude detection of event-like content
-        if any(word in text.lower() for word in ["music", "event", "concert", "show", "festival", "workshop"]):
-            title = text.split("  ")[0][:120]
+            if len(title) < 5:
+                continue
 
             events.append({
                 "title": title,
                 "start_dt": datetime.now(timezone.utc).isoformat(),
                 "location": "",
                 "source": source_name,
-                "url": source_url
+                "url": href if href.startswith("http") else source_url
             })
 
-        if len(events) >= 5:
+        if len(events) >= 10:
             break
 
     return events
