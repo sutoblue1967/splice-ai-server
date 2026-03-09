@@ -317,7 +317,13 @@ def home():
 @app.get("/health")
 def health():
     refresh_cache_if_needed()
-    return jsonify({"ok": True, "events_cached": len(_cache.get("events", []))}), 200
+    return jsonify({"ok": True, "events_cached": len(_cache.get("events", []))})
+
+
+@app.get("/events")
+def events():
+    refresh_cache_if_needed()
+    return jsonify(_cache.get("events", []))
 
 
 def handle_chat():
