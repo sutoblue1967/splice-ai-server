@@ -134,6 +134,36 @@ def normalize_location(loc: Any) -> str:
         return " — ".join([p for p in [name.strip(), addr_str.strip()] if p])
     return ""
 
+def extract_events_from_html(html: str, source_name: str, source_url: str):
+    soup = BeautifulSoup(html, "html.parser")
+    events = []
+
+    # Try common event containers
+    cards = soup.find_all(["article", "div", "li"])
+
+    for c in cards:
+        text = c.get_text(" ", strip=True)
+
+        if len(text) < 20:
+            continue
+
+        # crude detection of event-like content
+        if any(word in text.lower() for word in ["music", "event", "concert", "show", "festival", "workshop"]):
+            title = text.split("  ")[0][:120]
+
+            events.append({
+                "title": title,
+                "start_dt": datetime.now(timezone.utc).isoformat(),
+                "location": "",
+                "source": source_name,
+                "url": source_url
+            })
+
+        if len(events) >= 5:
+            break
+
+    return events
+
 
 def extract_events_from_jsonld(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
@@ -191,7 +221,13 @@ def refresh_cache_if_needed(force: bool = False) -> None:
         try:
             html = fetch_html(src["url"])
             extracted = extract_events_from_jsonld(html, src["name"], src["url"])
-            all_events.extend(extracted)
+
+# If JSON-LD didn't return anything, try HTML scraping
+if not extracted:
+    extracted = extract_events_from_html(html, src["name"], src["url"])
+
+all_events.extend(extracted)
+
         except Exception:
             # Keep going if one source fails
             continue
