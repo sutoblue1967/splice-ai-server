@@ -138,15 +138,14 @@ def extract_events_from_html(html: str, source_name: str, source_url: str):
     soup = BeautifulSoup(html, "html.parser")
     events = []
 
-    links = soup.find_all("a", href=True)
-
-    for link in links:
+    for link in soup.find_all("a", href=True):
         href = link["href"]
 
-        if "/event" in href or "/events" in href:
+        # Look for event-style URLs
+        if "/event/" in href or "/events/" in href:
             title = link.get_text(strip=True)
 
-            if len(title) < 5:
+            if not title or len(title) < 5:
                 continue
 
             events.append({
@@ -154,10 +153,10 @@ def extract_events_from_html(html: str, source_name: str, source_url: str):
                 "start_dt": datetime.now(timezone.utc).isoformat(),
                 "location": "",
                 "source": source_name,
-                "url": href if href.startswith("http") else source_url
+                "url": href if href.startswith("http") else source_url + href
             })
 
-        if len(events) >= 10:
+        if len(events) >= 15:
             break
 
     return events
