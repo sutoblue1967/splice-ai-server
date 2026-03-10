@@ -388,8 +388,8 @@ def handle_chat():
             lines.append("• " + e["title"] + " — " + e["location"])
         event_list = "\n".join(lines)
 
-    return {
-        "reply": f"I found these upcoming events:\n\n{event_list}\n\nWant details on any of these?"
+        return {
+            "reply": f"I found these upcoming events:\n\n{event_list}\n\nWant details on any of these?"
     }
 
     scoped = filter_by_intent(events, intent)
