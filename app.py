@@ -381,11 +381,11 @@ def handle_chat():
     events = _cache.get("events", [])
     
     if events:
-    lines = []
-    for e in events[:5]:
-        lines.append(f"• {e['title']} — 
+        lines = []
+        for e in events[:5]:
+            lines.append(f"• {e['title']} — 
     {e['location']}")
-    event_list = "\n".join(lines)
+        event_list = "\n".join(lines)
 
     return {
         "reply": f"I found these upcoming events:\n\n{event_list}\n\nWant details on any of these?"
