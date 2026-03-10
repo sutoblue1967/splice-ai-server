@@ -380,7 +380,7 @@ def handle_chat():
     intent = classify_query(msg)
     events = _cache.get("events", [])
     
-    if events:
+    if events and intent == "events":
         lines = []
         for e in events[:5]:
             lines.append("• " + e["title"] + " — " + e["location"])
