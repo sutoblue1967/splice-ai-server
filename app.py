@@ -213,8 +213,26 @@ def refresh_cache_if_needed(force: bool = False) -> None:
     if not force and (time.time() - ts) < CACHE_TTL_SECONDS and _cache.get("events"):
         return
 
-    all_events: List[Dict[str, Any]] = []
+all_events: List[Dict[str, Any]] = []
+
+# Pull events from Adelphia sitemap
+event_urls = get_event_urls_from_sitemap(
+    "https://www.theadelphia.com/adelphia_event-sitemap.xml"
+)
+
+for url in event_urls[:10]:
+    title = url.split("/")[-2].replace("-", " ").title()
+
+    all_events.append({
+        "title": title,
+        "start_dt": now_utc().isoformat(),
+        "location": "The Adelphia",
+        "source": "The Adelphia",
+        "url": url
+    })
+
 for src in SOURCES:
+
     try:
         html = fetch_html(src["url"])
 
