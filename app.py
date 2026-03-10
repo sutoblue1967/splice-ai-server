@@ -397,7 +397,7 @@ def handle_chat():
         return jsonify(
             {
                 "message": (
-                    f"Hi, I’m {EL_NAME} — your insider for everything happening around the MOV.\n\n"
+                    f"Hi, I’m — your insider for everything happening around the MOV.\n\n"
                     "✨ **Today’s Highlights**\n"
                     "• (warming up from live sources)\n\n"
                     "📅 **This Weekend**\n"
