@@ -90,7 +90,7 @@ def get_event_urls_from_sitemap(sitemap_url):
         for url in root.findall(".//{*}loc"):
             link = url.text
             
-            if "/event/" in link:
+            if "/event" in link:
                 urls.append(link)
 
     except Exception as e:
