@@ -88,7 +88,8 @@ def get_event_urls_from_sitemap(sitemap_url):
         root = ET.fromstring(r.text)
 
         for url in root.findall(".//{*}loc"):
-            link = url.text
+    link = url.text
+    print("SITEMAP URL:", link)
             
             if "/event" in link:
                 urls.append(link)
