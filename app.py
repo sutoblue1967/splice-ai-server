@@ -379,6 +379,8 @@ def handle_chat():
 
     intent = classify_query(msg)
     events = _cache.get("events", [])
+
+    event_list = "”
     
     if events and intent == "events":
         lines = []
