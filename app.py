@@ -302,6 +302,27 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
             out.append(e)
     return out
 
+import xml.etree.ElementTree as ET
+
+def get_event_urls_from_sitemap(sitemap_url):
+    urls = []
+    
+    try:
+        r = requests.get(sitemap_url, timeout=10)
+        r.raise_for_status()
+        
+        root = ET.fromstring(r.text)
+
+        for url in root.findall(".//{*}loc"):
+            link = url.text
+            
+            if "/event/" in link:
+                urls.append(link)
+
+    except Exception as e:
+        print("Sitemap error:", e)
+
+    return urls
 
 # ----------------------------
 # Routes
