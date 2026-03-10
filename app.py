@@ -361,8 +361,11 @@ def health():
 @app.get("/events")
 def events():
     refresh_cache_if_needed()
-    return jsonify(_cache.get("events", []))
-
+    return app.response_class(
+        response=json.dumps(_cache.get("events", []), indent=2),
+        status=200,
+        mimetype="application/json"
+    )
 
 def handle_chat():
     data = request.get_json(silent=True) or {}
