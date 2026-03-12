@@ -300,7 +300,7 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
         sd = dtparser.isoparse(e["start_dt"]).astimezone(timezone.utc)
         nice = sd.strftime("%a %b %d, %I:%M %p UTC")
         loc = f" ({e['location']})" if e.get("location") else ""
-        lines.append(f"• **{e['title']}** — {nice}{loc}\n  _Source: {e['source']}_")
+        lines.append(f"{e['title']} — {nice}{loc}")
     return "\n".join(lines)
 
 
