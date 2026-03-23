@@ -293,15 +293,21 @@ for src in SOURCES:
 
 def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
     if not events:
-        return "I’m not seeing any clean upcoming events from my current sources yet. Try **music**, **art**, **classes**, or **this weekend**."
+        return "I’m not seeing any upcoming events from my current sources yet. Try music, art, classes, or this weekend."
 
     lines = []
     for e in events[:limit]:
-        sd = dtparser.isoparse(e["start_dt"]).astimezone(timezone.utc)
-        nice = sd.strftime("%a %b %d, %I:%M %p UTC")
-        loc = f" ({e['location']})" if e.get("location") else ""
-        lines.append(f"{e['title']} — {nice}{loc}")
-    return "\n".join(lines)
+        sd = dtparser.isoparse(e["start_dt"]).astimezone()
+        nice = sd.strftime("%a, %b %d at %-I:%M %p")
+        title = e.get("title", "Event").strip()
+        location = e.get("location", "").strip()
+
+        if location:
+            lines.append(f"{title}\n{nice}\n{location}")
+        else:
+            lines.append(f"{title}\n{nice}")
+
+    return "\n\n".join(lines)
 
 
 def classify_query(msg: str) -> str:
