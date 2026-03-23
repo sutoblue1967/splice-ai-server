@@ -248,7 +248,7 @@ for url in event_urls[:10]:
 
     all_events.append({
     "title": title,
-    "start_dt": (now_utc() + timedelta(days=30)).isoformat(),
+    "start_dt": None,
     "location": "The Adelphia",
     "source": "The Adelphia",
     "url": url
@@ -297,10 +297,15 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
 
     lines = []
     for e in events[:limit]:
-        sd = dtparser.isoparse(e["start_dt"]).astimezone()
-        nice = sd.strftime("%a, %b %d at %-I:%M %p")
         title = e.get("title", "Event").strip()
         location = e.get("location", "").strip()
+        start_dt = e.get("start_dt")
+
+        if start_dt:
+            sd = dtparser.isoparse(start_dt).astimezone()
+            nice = sd.strftime("%a, %b %d at %I:%M %p").replace(" 0", " ").replace("at 0", "at ")
+        else:
+            nice = "Date coming soon"
 
         if location:
             lines.append(f"{title}\n{nice}\n{location}")
