@@ -339,7 +339,7 @@ def refresh_cache_if_needed(force: bool = False) -> None:
     all_events: List[Dict[str, Any]] = []
 
   # Adelphia sitemap -> visit each event page for real event details
-event_urls = get_event_urls_from_sitemap(
+  event_urls = get_event_urls_from_sitemap(
     "https://www.theadelphia.com/adelphia_event-sitemap.xml"
 )
 
