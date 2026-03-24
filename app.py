@@ -1,7 +1,7 @@
 import os
 import json
 import time
-from datetime import datetime, timezone,timedelta
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from dateutil import parser as dtparser
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
 CORS(app)
@@ -76,21 +77,20 @@ def flatten_jsonld(obj: Any) -> List[Dict[str, Any]]:
     walk(obj)
     return [n for n in nodes if isinstance(n, dict)]
 
-import xml.etree.ElementTree as ET
 
-def get_event_urls_from_sitemap(sitemap_url):
-    urls = []
-    
+def get_event_urls_from_sitemap(sitemap_url: str) -> List[str]:
+    urls: List[str] = []
+
     try:
-        r = requests.get(sitemap_url, timeout=10)
+        r = requests.get(sitemap_url, headers={"User-Agent": USER_AGENT}, timeout=10)
         r.raise_for_status()
-        
+
         root = ET.fromstring(r.text)
 
         for url in root.findall(".//{*}loc"):
-            link = url.text
+            link = url.text or ""
             print("SITEMAP URL:", link)
-            
+
             if "/event" in link:
                 urls.append(link)
 
@@ -110,24 +110,20 @@ def is_event_node(n: Dict[str, Any]) -> bool:
 def parse_datetime_smart(dt_str: str) -> Optional[datetime]:
     """
     Parse dt string; return timezone-aware UTC datetime if possible.
-    If dt is naive, assume it's local-ish and convert to UTC by attaching UTC (good enough for filtering past/future).
-    If year missing, infer next occurrence.
+    If dt is naive, attach UTC to keep comparisons consistent.
+    If parsed result is in the past, bump year forward up to 2 times.
     """
     if not dt_str:
         return None
 
-    # Some JSON-LD provides ISO with timezone; dateutil handles it.
     try:
         parsed = dtparser.parse(dt_str)
     except Exception:
         return None
 
-    # If no tz info, attach UTC (keeps ordering consistent).
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
 
-    # If date string had no year, dateutil will still pick something; we enforce "next occurrence" rule:
-    # If parsed is in the past, bump +1 year until it's in the future (max 2 bumps).
     n = now_utc()
     bumped = parsed
     for _ in range(2):
@@ -139,12 +135,13 @@ def parse_datetime_smart(dt_str: str) -> Optional[datetime]:
 
 
 def normalize_location(loc: Any) -> str:
-    # JSON-LD location may be string or object
     if isinstance(loc, str):
         return loc.strip()
+
     if isinstance(loc, dict):
-        name = loc.get("name") or ""
+        name = (loc.get("name") or "").strip()
         addr = loc.get("address") or ""
+
         if isinstance(addr, dict):
             parts = [
                 addr.get("streetAddress", ""),
@@ -153,30 +150,33 @@ def normalize_location(loc: Any) -> str:
             ]
             addr_str = ", ".join([p for p in parts if p])
         else:
-            addr_str = str(addr) if addr else ""
-        return " — ".join([p for p in [name.strip(), addr_str.strip()] if p])
+            addr_str = str(addr).strip() if addr else ""
+
+        return " — ".join([p for p in [name, addr_str] if p])
+
     return ""
 
-def extract_events_from_html(html: str, source_name: str, source_url: str):
+
+def extract_events_from_html(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
-    events = []
+    events: List[Dict[str, Any]] = []
 
     for link in soup.find_all("a", href=True):
         href = link["href"]
-
-        # Look for event-style URLs
         if "/event/" in href or "/events/" in href:
             title = link.get_text(strip=True)
 
             if not title or len(title) < 5:
                 continue
 
+            full_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
+
             events.append({
                 "title": title,
-                "start_dt": datetime.now(timezone.utc).isoformat(),
+                "start_dt": None,  # safer than inventing a fake date
                 "location": "",
                 "source": source_name,
-                "url": href if href.startswith("http") else source_url + href
+                "url": full_url,
             })
 
         if len(events) >= 15:
@@ -194,6 +194,7 @@ def extract_events_from_jsonld(html: str, source_name: str, source_url: str) -> 
         raw = (s.string or "").strip()
         if not raw:
             continue
+
         data = safe_json_loads(raw)
         if data is None:
             continue
@@ -210,24 +211,20 @@ def extract_events_from_jsonld(html: str, source_name: str, source_url: str) -> 
 
             start_dt = parse_datetime_smart(str(start))
             end_dt = parse_datetime_smart(str(end)) if end else None
-
             loc = normalize_location(node.get("location"))
 
-            if not title or not start_dt:
+            if not title:
                 continue
 
-            events.append(
-                {
-                    "title": title,
-                    "start_dt": start_dt.isoformat(),
-                    "end_dt": end_dt.isoformat() if end_dt else None,
-                    "location": loc,
-                    "source": source_name,
-                    "url": event_url,
-                }
-            )
+            events.append({
+                "title": title,
+                "start_dt": start_dt.isoformat() if start_dt else None,
+                "end_dt": end_dt.isoformat() if end_dt else None,
+                "location": loc,
+                "source": source_name,
+                "url": event_url,
+            })
 
-    # If JSON-LD missing, return empty; we can add HTML fallbacks later per-site.
     return events
 
 
@@ -236,56 +233,68 @@ def refresh_cache_if_needed(force: bool = False) -> None:
     if not force and (time.time() - ts) < CACHE_TTL_SECONDS and _cache.get("events"):
         return
 
-all_events: List[Dict[str, Any]] = []
+    all_events: List[Dict[str, Any]] = []
 
-# Pull events from Adelphia sitemap
-event_urls = get_event_urls_from_sitemap(
-    "https://www.theadelphia.com/adelphia_event-sitemap.xml"
-)
+    # Adelphia sitemap titles only for now
+    event_urls = get_event_urls_from_sitemap(
+        "https://www.theadelphia.com/adelphia_event-sitemap.xml"
+    )
 
-for url in event_urls[:10]:
-    title = url.split("/")[-2].replace("-", " ").title()
+    for url in event_urls[:10]:
+        title = url.split("/")[-2].replace("-", " ").title()
 
-    all_events.append({
-        "title": title,
-        "start_dt": None,
-        "location": "The Adelphia",
-        "source": "The Adelphia",
-        "url": url
-    })
+        all_events.append({
+            "title": title,
+            "start_dt": None,  # real Adelphia date scraping comes next
+            "location": "The Adelphia",
+            "source": "The Adelphia",
+            "url": url,
+        })
 
-for src in SOURCES:
+    # Other sources
+    for src in SOURCES:
+        try:
+            html = fetch_html(src["url"])
 
-    try:
-        html = fetch_html(src["url"])
+            extracted = extract_events_from_jsonld(html, src["name"], src["url"])
+            if not extracted:
+                extracted = extract_events_from_html(html, src["name"], src["url"])
 
-        extracted = extract_events_from_jsonld(html, src["name"], src["url"])
+            all_events.extend(extracted)
 
-        # fallback if JSON-LD returns nothing
-        if not extracted:
-            extracted = extract_events_from_html(html, src["name"], src["url"])
+        except Exception as e:
+            print(f"Source failed: {src['name']} -> {e}")
+            continue
 
-        all_events.extend(extracted)
-
-    except Exception:
-        # Keep going if one source fails
-        continue
-
-    # Filter to future-only
+    # Keep undated events. Only exclude dated events that are clearly in the past.
     n = now_utc()
     filtered: List[Dict[str, Any]] = []
+
     for e in all_events:
+        start_dt = e.get("start_dt")
+
+        if not start_dt:
+            filtered.append(e)
+            continue
+
         try:
-            sd = dtparser.isoparse(e["start_dt"])
+            sd = dtparser.isoparse(start_dt)
             if sd.tzinfo is None:
                 sd = sd.replace(tzinfo=timezone.utc)
+
             if sd >= n:
                 filtered.append(e)
         except Exception:
-            continue
+            filtered.append(e)
 
-    # Sort by soonest
-    filtered.sort(key=lambda x: x["start_dt"])
+    # Dated events first, undated after
+    def sort_key(e: Dict[str, Any]):
+        start_dt = e.get("start_dt")
+        if not start_dt:
+            return ("1", "9999-12-31T23:59:59+00:00")
+        return ("0", start_dt)
+
+    filtered.sort(key=sort_key)
 
     _cache["ts"] = time.time()
     _cache["events"] = filtered
@@ -293,7 +302,7 @@ for src in SOURCES:
 
 def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
     if not events:
-        return "I’m not seeing any upcoming events from my current sources yet. Try music, art, classes, or this weekend."
+        return "I’m not seeing any upcoming events from my current sources yet. Try music, art, classes, family, or this weekend."
 
     lines = []
     for e in events[:limit]:
@@ -317,16 +326,20 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
 
 def classify_query(msg: str) -> str:
     m = msg.lower()
+
     if any(k in m for k in ["music", "live music", "band", "concert", "show"]):
         return "music"
     if any(k in m for k in ["art", "exhibit", "gallery"]):
         return "art"
     if any(k in m for k in ["class", "classes", "workshop", "camp"]):
         return "classes"
+    if any(k in m for k in ["family", "kids", "kid", "children", "child"]):
+        return "family"
     if any(k in m for k in ["weekend", "this weekend", "friday", "saturday", "sunday"]):
         return "weekend"
     if any(k in m for k in ["today", "tonight"]):
         return "today"
+
     return "general"
 
 
@@ -362,7 +375,7 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
                 sd = dtparser.isoparse(start_dt)
                 if sd.tzinfo is None:
                     sd = sd.replace(tzinfo=timezone.utc)
-                if sd.weekday() in [4, 5, 6]:  # Friday, Saturday, Sunday
+                if sd.weekday() in [4, 5, 6]:
                     out.append(e)
             except Exception:
                 continue
@@ -372,6 +385,7 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
         "music": ["music", "concert", "band", "live", "show"],
         "art": ["art", "exhibit", "gallery"],
         "classes": ["class", "workshop", "camp", "lesson"],
+        "family": ["family", "kids", "kid", "children", "child"],
     }
 
     ks = keywords.get(intent, [])
@@ -413,8 +427,9 @@ def events():
     return app.response_class(
         response=json.dumps(_cache.get("events", []), indent=2),
         status=200,
-        mimetype="application/json"
+        mimetype="application/json",
     )
+
 
 def handle_chat():
     data = request.get_json(silent=True) or {}
@@ -423,47 +438,24 @@ def handle_chat():
     if not msg:
         return jsonify({"message": "Message is required"}), 400
 
-    # Always ensure cache is warm
     refresh_cache_if_needed()
 
     intent = classify_query(msg)
     events = _cache.get("events", [])
-
-    event_list = ""
-    
-    if events and intent == "events":
-        lines = []
-        for e in events[:5]:
-            lines.append("• " + e["title"] + " — " + e["location"])
-        event_list = "\n".join(lines)
-
-        return {
-            "reply": f"I found these upcoming events:\n\n{event_list}\n\nWant details on any of these?"
-    }
-
     scoped = filter_by_intent(events, intent)
 
-    # Intro / landing response
     if msg.lower() in ["hi", "hello", "hey"]:
-        return jsonify(
-            {
-                "message": (
-                    f"Hi, I’m — your insider for everything happening around the MOV.\n\n"
-                    "✨ **Today’s Highlights**\n"
-                    "• (warming up from live sources)\n\n"
-                    "📅 **This Weekend**\n"
-                    "• Try: “music this weekend” or “family events”\n\n"
-                    "Tell me what kind of vibe you’re looking for: **music, family, art, classes, shows, date night, free stuff**."
-                )
-            }
-        ), 200
+        return jsonify({
+            "message": (
+                f"Hi, I’m {EL_NAME} — your insider for everything happening around the MOV.\n\n"
+                "Try asking for music, art, classes, family events, or what’s happening this weekend."
+            )
+        }), 200
 
-    # Main event answer
     reply = format_events(scoped, limit=6)
     return jsonify({"message": reply}), 200
 
 
-# ✅ Accept BOTH URLs so WP never 404s
 @app.post("/chat")
 def chat():
     return handle_chat()
