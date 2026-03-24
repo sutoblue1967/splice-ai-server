@@ -106,11 +106,13 @@ def get_adelphia_event_details(event_url: str) -> Dict[str, Any]:
     - real event start datetime
     - location
     """
+    fallback_title = event_url.split("/")[-2].replace("-", " ").title()
+
     try:
         html = fetch_html(event_url)
         soup = BeautifulSoup(html, "html.parser")
 
-        # First try JSON-LD, which is usually the cleanest source
+        # 1) Try JSON-LD first
         scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
         for s in scripts:
             raw = (s.string or "").strip()
@@ -126,19 +128,60 @@ def get_adelphia_event_details(event_url: str) -> Dict[str, Any]:
                 if not is_event_node(node):
                     continue
 
-                title = (node.get("name") or "").strip()
+                title = (node.get("name") or "").strip() or fallback_title
                 start = node.get("startDate") or node.get("start_date") or ""
-                loc = normalize_location(node.get("location"))
+                loc = normalize_location(node.get("location")) or "The Adelphia"
 
                 start_dt = parse_datetime_smart(str(start)) if start else None
 
+                print("ADELPHIA JSONLD:", title, start, start_dt)
+
                 return {
-                    "title": title or event_url.split("/")[-2].replace("-", " ").title(),
+                    "title": title,
                     "start_dt": start_dt.isoformat() if start_dt else None,
-                    "location": loc or "The Adelphia",
+                    "location": loc,
                     "source": "The Adelphia",
                     "url": event_url,
                 }
+
+        # 2) Fallback: look for <time datetime="...">
+        time_tag = soup.find("time")
+        start_dt = None
+        raw_time = ""
+
+        if time_tag:
+            raw_time = (time_tag.get("datetime") or time_tag.get_text(" ", strip=True) or "").strip()
+            parsed = parse_datetime_smart(raw_time) if raw_time else None
+            if parsed:
+                start_dt = parsed
+
+        # 3) Fallback title from page
+        title_tag = soup.find(["h1", "h2"])
+        title = fallback_title
+        if title_tag:
+            possible_title = title_tag.get_text(" ", strip=True)
+            if possible_title:
+                title = possible_title
+
+        print("ADELPHIA FALLBACK:", title, raw_time, start_dt)
+
+        return {
+            "title": title,
+            "start_dt": start_dt.isoformat() if start_dt else None,
+            "location": "The Adelphia",
+            "source": "The Adelphia",
+            "url": event_url,
+        }
+
+    except Exception as e:
+        print(f"Adelphia page parse failed for {event_url}: {e}")
+        return {
+            "title": fallback_title,
+            "start_dt": None,
+            "location": "The Adelphia",
+            "source": "The Adelphia",
+            "url": event_url,
+        }
 
         # Fallback: title from URL, unknown date
         return {
@@ -476,7 +519,7 @@ def health():
 
 @app.get("/events")
 def events():
-    refresh_cache_if_needed()
+    refresh_cache_if_needed(force=True)
     return app.response_class(
         response=json.dumps(_cache.get("events", []), indent=2),
         status=200,
@@ -491,7 +534,7 @@ def handle_chat():
     if not msg:
         return jsonify({"message": "Message is required"}), 400
 
-    refresh_cache_if_needed()
+    refresh_cache_if_needed(force=True)
 
     intent = classify_query(msg)
     events = _cache.get("events", [])
