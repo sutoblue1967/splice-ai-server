@@ -338,21 +338,28 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
     all_events: List[Dict[str, Any]] = []
 
-  # Adelphia sitemap -> visit each event page for real event details
-  event_urls = get_event_urls_from_sitemap(
-    "https://www.theadelphia.com/adelphia_event-sitemap.xml"
-)
+    # Pull events from Adelphia sitemap
+    event_urls = get_event_urls_from_sitemap(
+        "https://www.theadelphia.com/adelphia_event-sitemap.xml"
+    )
 
-for url in event_urls[:10]:
-    event_data = get_adelphia_event_details(url)
-    all_events.append(event_data)
+    for url in event_urls[:10]:
+        title = url.split("/")[-2].replace("-", " ").title()
 
-    # Other sources
+        all_events.append({
+            "title": title,
+            "start_dt": None,
+            "location": "The Adelphia",
+            "source": "The Adelphia",
+            "url": url
+        })
+
     for src in SOURCES:
         try:
             html = fetch_html(src["url"])
 
             extracted = extract_events_from_jsonld(html, src["name"], src["url"])
+
             if not extracted:
                 extracted = extract_events_from_html(html, src["name"], src["url"])
 
@@ -362,7 +369,7 @@ for url in event_urls[:10]:
             print(f"Source failed: {src['name']} -> {e}")
             continue
 
-    # Keep undated events. Only exclude dated events that are clearly in the past.
+    # Keep undated events, only remove dated events clearly in the past
     n = now_utc()
     filtered: List[Dict[str, Any]] = []
 
@@ -377,14 +384,13 @@ for url in event_urls[:10]:
             sd = dtparser.isoparse(start_dt)
             if sd.tzinfo is None:
                 sd = sd.replace(tzinfo=timezone.utc)
-
             if sd >= n:
                 filtered.append(e)
         except Exception:
             filtered.append(e)
 
     # Dated events first, undated after
-    def sort_key(e: Dict[str, Any]):
+    def sort_key(e):
         start_dt = e.get("start_dt")
         if not start_dt:
             return ("1", "9999-12-31T23:59:59+00:00")
