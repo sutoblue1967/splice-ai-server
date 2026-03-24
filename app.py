@@ -99,6 +99,66 @@ def get_event_urls_from_sitemap(sitemap_url: str) -> List[str]:
 
     return urls
 
+def get_adelphia_event_details(event_url: str) -> Dict[str, Any]:
+    """
+    Visit an Adelphia event page and try to extract:
+    - title
+    - real event start datetime
+    - location
+    """
+    try:
+        html = fetch_html(event_url)
+        soup = BeautifulSoup(html, "html.parser")
+
+        # First try JSON-LD, which is usually the cleanest source
+        scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
+        for s in scripts:
+            raw = (s.string or "").strip()
+            if not raw:
+                continue
+
+            data = safe_json_loads(raw)
+            if data is None:
+                continue
+
+            nodes = flatten_jsonld(data)
+            for node in nodes:
+                if not is_event_node(node):
+                    continue
+
+                title = (node.get("name") or "").strip()
+                start = node.get("startDate") or node.get("start_date") or ""
+                loc = normalize_location(node.get("location"))
+
+                start_dt = parse_datetime_smart(str(start)) if start else None
+
+                return {
+                    "title": title or event_url.split("/")[-2].replace("-", " ").title(),
+                    "start_dt": start_dt.isoformat() if start_dt else None,
+                    "location": loc or "The Adelphia",
+                    "source": "The Adelphia",
+                    "url": event_url,
+                }
+
+        # Fallback: title from URL, unknown date
+        return {
+            "title": event_url.split("/")[-2].replace("-", " ").title(),
+            "start_dt": None,
+            "location": "The Adelphia",
+            "source": "The Adelphia",
+            "url": event_url,
+        }
+
+    except Exception as e:
+        print(f"Adelphia page parse failed for {event_url}: {e}")
+        return {
+            "title": event_url.split("/")[-2].replace("-", " ").title(),
+            "start_dt": None,
+            "location": "The Adelphia",
+            "source": "The Adelphia",
+            "url": event_url,
+        }
+
 
 def is_event_node(n: Dict[str, Any]) -> bool:
     t = n.get("@type")
@@ -235,21 +295,14 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
     all_events: List[Dict[str, Any]] = []
 
-    # Adelphia sitemap titles only for now
-    event_urls = get_event_urls_from_sitemap(
-        "https://www.theadelphia.com/adelphia_event-sitemap.xml"
-    )
+  # Adelphia sitemap -> visit each event page for real event details
+event_urls = get_event_urls_from_sitemap(
+    "https://www.theadelphia.com/adelphia_event-sitemap.xml"
+)
 
-    for url in event_urls[:10]:
-        title = url.split("/")[-2].replace("-", " ").title()
-
-        all_events.append({
-            "title": title,
-            "start_dt": None,  # real Adelphia date scraping comes next
-            "location": "The Adelphia",
-            "source": "The Adelphia",
-            "url": url,
-        })
+for url in event_urls[:10]:
+    event_data = get_adelphia_event_details(url)
+    all_events.append(event_data)
 
     # Other sources
     for src in SOURCES:
