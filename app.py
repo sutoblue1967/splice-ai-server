@@ -247,12 +247,12 @@ for url in event_urls[:10]:
     title = url.split("/")[-2].replace("-", " ").title()
 
     all_events.append({
-    "title": title,
-    "start_dt": None,
-    "location": "The Adelphia",
-    "source": "The Adelphia",
-    "url": url
-})
+        "title": title,
+        "start_dt": None,
+        "location": "The Adelphia",
+        "source": "The Adelphia",
+        "url": url
+    })
 
 for src in SOURCES:
 
@@ -334,13 +334,44 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
     if intent == "general":
         return events
 
-    # Very simple keyword filtering for now (we’ll improve this once we confirm each site’s data quality).
+    now = now_utc()
+
+    if intent == "today":
+        out = []
+        for e in events:
+            start_dt = e.get("start_dt")
+            if not start_dt:
+                continue
+            try:
+                sd = dtparser.isoparse(start_dt)
+                if sd.tzinfo is None:
+                    sd = sd.replace(tzinfo=timezone.utc)
+                if sd.date() == now.date():
+                    out.append(e)
+            except Exception:
+                continue
+        return out
+
+    if intent == "weekend":
+        out = []
+        for e in events:
+            start_dt = e.get("start_dt")
+            if not start_dt:
+                continue
+            try:
+                sd = dtparser.isoparse(start_dt)
+                if sd.tzinfo is None:
+                    sd = sd.replace(tzinfo=timezone.utc)
+                if sd.weekday() in [4, 5, 6]:  # Friday, Saturday, Sunday
+                    out.append(e)
+            except Exception:
+                continue
+        return out
+
     keywords = {
         "music": ["music", "concert", "band", "live", "show"],
         "art": ["art", "exhibit", "gallery"],
         "classes": ["class", "workshop", "camp", "lesson"],
-        "weekend": [],  # weekend filtering is date-based; we’ll add later
-        "today": [],    # today filtering is date-based; we’ll add later
     }
 
     ks = keywords.get(intent, [])
@@ -349,9 +380,16 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
 
     out = []
     for e in events:
-        t = (e.get("title") or "").lower()
-        if any(k in t for k in ks):
+        hay = " ".join([
+            str(e.get("title", "")),
+            str(e.get("location", "")),
+            str(e.get("source", "")),
+            str(e.get("url", "")),
+        ]).lower()
+
+        if any(k in hay for k in ks):
             out.append(e)
+
     return out
 
 
