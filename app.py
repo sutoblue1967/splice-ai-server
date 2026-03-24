@@ -22,7 +22,6 @@ CACHE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
 USER_AGENT = "SpliceEventBot/1.0 (+https://splice.social)"
 
 SOURCES = [
-    {"name": "The Adelphia", "url": "https://www.theadelphia.com/events/"},
     {"name": "Greater Parkersburg", "url": "https://www.greaterparkersburg.com/events/"},
     {"name": "Parkersburg Art Center", "url": "https://www.parkersburgartcenter.org/upcomingcurrent-events"},
 ]
@@ -54,13 +53,6 @@ def safe_json_loads(s: str) -> Optional[Any]:
 
 
 def flatten_jsonld(obj: Any) -> List[Dict[str, Any]]:
-    """
-    JSON-LD can be:
-      - dict
-      - list
-      - dict with @graph
-    Return list of dict nodes.
-    """
     nodes: List[Dict[str, Any]] = []
 
     def walk(x: Any):
@@ -89,8 +81,6 @@ def get_event_urls_from_sitemap(sitemap_url: str) -> List[str]:
 
         for url in root.findall(".//{*}loc"):
             link = url.text or ""
-            print("SITEMAP URL:", link)
-
             if "/event" in link:
                 urls.append(link)
 
@@ -98,109 +88,6 @@ def get_event_urls_from_sitemap(sitemap_url: str) -> List[str]:
         print("Sitemap error:", e)
 
     return urls
-
-def get_adelphia_event_details(event_url: str) -> Dict[str, Any]:
-    """
-    Visit an Adelphia event page and try to extract:
-    - title
-    - real event start datetime
-    - location
-    """
-    fallback_title = event_url.split("/")[-2].replace("-", " ").title()
-
-    try:
-        html = fetch_html(event_url)
-        soup = BeautifulSoup(html, "html.parser")
-
-        # 1) Try JSON-LD first
-        scripts = soup.find_all("script", attrs={"type": "application/ld+json"})
-        for s in scripts:
-            raw = (s.string or "").strip()
-            if not raw:
-                continue
-
-            data = safe_json_loads(raw)
-            if data is None:
-                continue
-
-            nodes = flatten_jsonld(data)
-            for node in nodes:
-                if not is_event_node(node):
-                    continue
-
-                title = (node.get("name") or "").strip() or fallback_title
-                start = node.get("startDate") or node.get("start_date") or ""
-                loc = normalize_location(node.get("location")) or "The Adelphia"
-
-                start_dt = parse_datetime_smart(str(start)) if start else None
-
-                print("ADELPHIA JSONLD:", title, start, start_dt)
-
-                return {
-                    "title": title,
-                    "start_dt": start_dt.isoformat() if start_dt else None,
-                    "location": loc,
-                    "source": "The Adelphia",
-                    "url": event_url,
-                }
-
-        # 2) Fallback: look for <time datetime="...">
-        time_tag = soup.find("time")
-        start_dt = None
-        raw_time = ""
-
-        if time_tag:
-            raw_time = (time_tag.get("datetime") or time_tag.get_text(" ", strip=True) or "").strip()
-            parsed = parse_datetime_smart(raw_time) if raw_time else None
-            if parsed:
-                start_dt = parsed
-
-        # 3) Fallback title from page
-        title_tag = soup.find(["h1", "h2"])
-        title = fallback_title
-        if title_tag:
-            possible_title = title_tag.get_text(" ", strip=True)
-            if possible_title:
-                title = possible_title
-
-        print("ADELPHIA FALLBACK:", title, raw_time, start_dt)
-
-        return {
-            "title": title,
-            "start_dt": start_dt.isoformat() if start_dt else None,
-            "location": "The Adelphia",
-            "source": "The Adelphia",
-            "url": event_url,
-        }
-
-    except Exception as e:
-        print(f"Adelphia page parse failed for {event_url}: {e}")
-        return {
-            "title": fallback_title,
-            "start_dt": None,
-            "location": "The Adelphia",
-            "source": "The Adelphia",
-            "url": event_url,
-        }
-
-        # Fallback: title from URL, unknown date
-        return {
-            "title": event_url.split("/")[-2].replace("-", " ").title(),
-            "start_dt": None,
-            "location": "The Adelphia",
-            "source": "The Adelphia",
-            "url": event_url,
-        }
-
-    except Exception as e:
-        print(f"Adelphia page parse failed for {event_url}: {e}")
-        return {
-            "title": event_url.split("/")[-2].replace("-", " ").title(),
-            "start_dt": None,
-            "location": "The Adelphia",
-            "source": "The Adelphia",
-            "url": event_url,
-        }
 
 
 def is_event_node(n: Dict[str, Any]) -> bool:
@@ -211,11 +98,6 @@ def is_event_node(n: Dict[str, Any]) -> bool:
 
 
 def parse_datetime_smart(dt_str: str) -> Optional[datetime]:
-    """
-    Parse dt string; return timezone-aware UTC datetime if possible.
-    If dt is naive, attach UTC to keep comparisons consistent.
-    If parsed result is in the past, bump year forward up to 2 times.
-    """
     if not dt_str:
         return None
 
@@ -227,14 +109,7 @@ def parse_datetime_smart(dt_str: str) -> Optional[datetime]:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
 
-    n = now_utc()
-    bumped = parsed
-    for _ in range(2):
-        if bumped >= n:
-            break
-        bumped = bumped.replace(year=bumped.year + 1)
-
-    return bumped.astimezone(timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def normalize_location(loc: Any) -> str:
@@ -276,7 +151,7 @@ def extract_events_from_html(html: str, source_name: str, source_url: str) -> Li
 
             events.append({
                 "title": title,
-                "start_dt": None,  # safer than inventing a fake date
+                "start_dt": None,
                 "location": "",
                 "source": source_name,
                 "url": full_url,
@@ -338,28 +213,27 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
     all_events: List[Dict[str, Any]] = []
 
-    # Pull events from Adelphia sitemap
+    # Adelphia sitemap titles for now
     event_urls = get_event_urls_from_sitemap(
         "https://www.theadelphia.com/adelphia_event-sitemap.xml"
     )
 
     for url in event_urls[:10]:
         title = url.split("/")[-2].replace("-", " ").title()
-
         all_events.append({
             "title": title,
             "start_dt": None,
             "location": "The Adelphia",
             "source": "The Adelphia",
-            "url": url
+            "url": url,
         })
 
+    # Other sources
     for src in SOURCES:
         try:
             html = fetch_html(src["url"])
 
             extracted = extract_events_from_jsonld(html, src["name"], src["url"])
-
             if not extracted:
                 extracted = extract_events_from_html(html, src["name"], src["url"])
 
@@ -369,7 +243,7 @@ def refresh_cache_if_needed(force: bool = False) -> None:
             print(f"Source failed: {src['name']} -> {e}")
             continue
 
-    # Keep undated events, only remove dated events clearly in the past
+    # Keep undated events. Only remove dated events clearly in the past.
     n = now_utc()
     filtered: List[Dict[str, Any]] = []
 
@@ -390,7 +264,7 @@ def refresh_cache_if_needed(force: bool = False) -> None:
             filtered.append(e)
 
     # Dated events first, undated after
-    def sort_key(e):
+    def sort_key(e: Dict[str, Any]):
         start_dt = e.get("start_dt")
         if not start_dt:
             return ("1", "9999-12-31T23:59:59+00:00")
@@ -404,7 +278,7 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
 def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
     if not events:
-        return "I’m not seeing any upcoming events from my current sources yet. Try music, art, classes, family, or this weekend."
+        return "I’m not seeing any upcoming events from my current sources yet. Try music, art, classes, family, or a general event question."
 
     lines = []
     for e in events[:limit]:
@@ -413,8 +287,11 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
         start_dt = e.get("start_dt")
 
         if start_dt:
-            sd = dtparser.isoparse(start_dt).astimezone()
-            nice = sd.strftime("%a, %b %d at %I:%M %p").replace(" 0", " ").replace("at 0", "at ")
+            try:
+                sd = dtparser.isoparse(start_dt).astimezone()
+                nice = sd.strftime("%a, %b %d at %I:%M %p").replace(" 0", " ").replace("at 0", "at ")
+            except Exception:
+                nice = "Date coming soon"
         else:
             nice = "Date coming soon"
 
@@ -519,8 +396,12 @@ def home():
 
 @app.get("/health")
 def health():
-    refresh_cache_if_needed()
-    return jsonify({"ok": True, "events_cached": len(_cache.get("events", []))})
+    refresh_cache_if_needed(force=True)
+    return jsonify({
+        "ok": True,
+        "events_cached": len(_cache.get("events", [])),
+        "build": "clean-reset-v1",
+    })
 
 
 @app.get("/events")
@@ -550,7 +431,7 @@ def handle_chat():
         return jsonify({
             "message": (
                 f"Hi, I’m {EL_NAME} — your insider for everything happening around the MOV.\n\n"
-                "Try asking for music, art, classes, family events, or what’s happening this weekend."
+                "Try asking for music, art, classes, family events, or a general event question."
             )
         }), 200
 
