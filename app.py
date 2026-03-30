@@ -506,7 +506,7 @@ def handle_chat():
         intro = "Here are some great events I found:"
         outro = "\n\nWant me to narrow it down by music, family-friendly, art, or this weekend?"
 
-    reply = "TEST TEST TEST\n\n" + reply_body
+    reply = intro + "\n\n" + reply_body + outro
     return jsonify({"message": reply}), 200
 
 @app.post("/chat")
