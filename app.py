@@ -219,9 +219,9 @@ def refresh_cache_if_needed(force: bool = False) -> None:
     )
 
     for url in event_urls[:10]:
-        event_data = 
-    get_adelphia_event_details(url)
+        event_data = get_adelphia_event_details(url)
         all_events.append(event_data)
+
 
     # Other sources
     for src in SOURCES:
