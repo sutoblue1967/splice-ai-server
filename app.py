@@ -159,51 +159,59 @@ def extract_events_from_html(html: str, source_name: str, source_url: str) -> Li
 
 def extract_greater_parkersburg_events(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
-    text = soup.get_text("\n", strip=True)
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-
     events: List[Dict[str, Any]] = []
-    i = 0
 
-    while i < len(lines):
-        line = lines[i]
+    headings = soup.find_all(["h2", "h3"])
 
-        # Titles on this page are presented as event headings
-        if i + 3 < len(lines) and re.search(r"[A-Za-z]", line):
-            # Next lines often look like:
-            # March 30, 2026, 11:00 am
-            # -
-            # 8:00 pm
-            date_line = lines[i + 1]
-            dash_line = lines[i + 2]
-            end_time_line = lines[i + 3]
+    for heading in headings:
+        title = heading.get_text(" ", strip=True)
+        if not title or len(title) < 5:
+            continue
 
-            if re.match(r"^[A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2} [ap]m$", date_line) and dash_line == "-":
-                title = line
-                combined = date_line
-                parsed = parse_datetime_smart(combined)
+        # Look at nearby text after the heading
+        block_text = []
+        for sib in heading.next_siblings:
+            text = ""
+            if hasattr(sib, "get_text"):
+                text = sib.get_text(" ", strip=True)
+            else:
+                text = str(sib).strip()
 
-                # try to find a nearby "Read more..." link in the HTML by matching title text
-                event_url = source_url
-                heading = soup.find(lambda tag: tag.name in ["h2", "h3"] and title in tag.get_text(" ", strip=True))
-                if heading:
-                    read_more = heading.find_next("a", string=lambda s: s and "Read more" in s)
-                    if read_more and read_more.get("href"):
-                        href = read_more["href"]
-                        event_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
+            if text:
+                block_text.append(text)
 
-                events.append({
-                    "title": title,
-                    "start_dt": parsed.isoformat() if parsed else None,
-                    "location": "Greater Parkersburg Area",
-                    "source": source_name,
-                    "url": event_url,
-                })
+            # Stop once we hit a read-more area or after enough nearby text
+            if "Read more" in text or len(block_text) >= 6:
+                break
 
-                i += 4
-                continue
+        combined_text = " ".join(block_text)
 
-        i += 1
+        # Match lines like: April 2, 2026, 7:00 pm
+        match = re.search(
+            r"([A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2} [ap]m)",
+            combined_text
+        )
+
+        start_dt = None
+        if match:
+            parsed = parse_datetime_smart(match.group(1))
+            if parsed:
+                start_dt = parsed.isoformat()
+
+        # Find the nearest "Read more..." link
+        event_url = source_url
+        read_more = heading.find_next("a", string=lambda s: s and "Read more" in s)
+        if read_more and read_more.get("href"):
+            href = read_more["href"]
+            event_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
+
+        events.append({
+            "title": title,
+            "start_dt": start_dt,
+            "location": "Greater Parkersburg Area",
+            "source": source_name,
+            "url": event_url,
+        })
 
     return events
 
