@@ -487,27 +487,27 @@ def handle_chat():
 
     reply_body = format_events(scoped, limit=6)
 
-if intent == "weekend":
+        if intent == "weekend":
     intro = "Here are some great events I found for this weekend:"
     outro = "\n\nWant me to narrow that down to music, family-friendly, or something more laid-back?"
-elif intent == "music":
+        elif intent == "music":
     intro = "Here are some music events I found:"
     outro = "\n\nWant more like this, or want me to look for something family-friendly or artsy?"
-elif intent == "art":
+        elif intent == "art":
     intro = "Here are some art-related events I found:"
     outro = "\n\nWant me to keep going with art, or switch to music, family, or weekend events?"
-elif intent == "family":
+        elif intent == "family":
     intro = "Here are some family-friendly events I found:"
     outro = "\n\nWant more family options, or want me to look for music or weekend events too?"
-elif intent == "classes":
+        elif intent == "classes":
     intro = "Here are some classes and workshops I found:"
     outro = "\n\nWant me to keep looking for classes, or switch to music, family, or weekend events?"
-else:
+        else:
     intro = "Here are some great events I found:"
     outro = "\n\nWant me to narrow it down by music, family-friendly, art, or this weekend?"
 
-reply = f"{intro}\n\n{reply_body}{outro}"
-return jsonify({"message": reply}), 200
+        reply = f"{intro}\n\n{reply_body}{outro}"
+        return jsonify({"message": reply}), 200
 
 
 @app.post("/chat")
