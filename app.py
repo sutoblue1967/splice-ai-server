@@ -157,6 +157,56 @@ def extract_events_from_html(html: str, source_name: str, source_url: str) -> Li
 
     return events
 
+def extract_greater_parkersburg_events(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text("\n", strip=True)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+
+    events: List[Dict[str, Any]] = []
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+
+        # Titles on this page are presented as event headings
+        if i + 3 < len(lines) and re.search(r"[A-Za-z]", line):
+            # Next lines often look like:
+            # March 30, 2026, 11:00 am
+            # -
+            # 8:00 pm
+            date_line = lines[i + 1]
+            dash_line = lines[i + 2]
+            end_time_line = lines[i + 3]
+
+            if re.match(r"^[A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2} [ap]m$", date_line) and dash_line == "-":
+                title = line
+                combined = date_line
+                parsed = parse_datetime_smart(combined)
+
+                # try to find a nearby "Read more..." link in the HTML by matching title text
+                event_url = source_url
+                heading = soup.find(lambda tag: tag.name in ["h2", "h3"] and title in tag.get_text(" ", strip=True))
+                if heading:
+                    read_more = heading.find_next("a", string=lambda s: s and "Read more" in s)
+                    if read_more and read_more.get("href"):
+                        href = read_more["href"]
+                        event_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
+
+                events.append({
+                    "title": title,
+                    "start_dt": parsed.isoformat() if parsed else None,
+                    "location": "Greater Parkersburg Area",
+                    "source": source_name,
+                    "url": event_url,
+                })
+
+                i += 4
+                continue
+
+        i += 1
+
+    return events
+
 
 def extract_events_from_jsonld(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
@@ -278,9 +328,12 @@ def refresh_cache_if_needed(force: bool = False) -> None:
         try:
             html = fetch_html(src["url"])
 
-            extracted = extract_events_from_jsonld(html, src["name"], src["url"])
-            if not extracted:
-                extracted = extract_events_from_html(html, src["name"], src["url"])
+            if src["name"] == "Greater Parkersburg":
+                extracted = extract_greater_parkersburg_events(html, src["name"], src["url"])
+            else:
+                extracted = extract_events_from_jsonld(html, src["name"], src["url"])
+                if not extracted:
+                    extracted = extract_events_from_html(html, src["name"], src["url"])
 
             all_events.extend(extracted)
 
