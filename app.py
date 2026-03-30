@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -14,11 +15,8 @@ import xml.etree.ElementTree as ET
 app = Flask(__name__)
 CORS(app)
 
-# ----------------------------
-# Config
-# ----------------------------
 EL_NAME = "El"
-CACHE_TTL_SECONDS = 6 * 60 * 60  # 6 hours
+CACHE_TTL_SECONDS = 6 * 60 * 60
 USER_AGENT = "SpliceEventBot/1.0 (+https://splice.social)"
 
 SOURCES = [
@@ -32,9 +30,6 @@ _cache: Dict[str, Any] = {
 }
 
 
-# ----------------------------
-# Helpers
-# ----------------------------
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -206,6 +201,64 @@ def extract_events_from_jsonld(html: str, source_name: str, source_url: str) -> 
     return events
 
 
+def get_adelphia_event_details(event_url: str) -> Dict[str, Any]:
+    fallback_title = event_url.split("/")[-2].replace("-", " ").title()
+
+    try:
+        html = fetch_html(event_url)
+        soup = BeautifulSoup(html, "html.parser")
+
+        title = fallback_title
+        h1 = soup.find("h1")
+        if h1:
+            title_text = h1.get_text(" ", strip=True)
+            if title_text:
+                title = title_text
+
+        page_text = soup.get_text("\n", strip=True)
+        lines = [line.strip() for line in page_text.splitlines() if line.strip()]
+
+        date_text = None
+        show_text = None
+
+        for i, line in enumerate(lines):
+            if line.lower() == "date" and i + 1 < len(lines):
+                date_text = lines[i + 1]
+            if line.lower() == "showtime" and i + 1 < len(lines):
+                show_text = lines[i + 1]
+
+        start_dt = None
+
+        if date_text and show_text:
+            match = re.search(r"(\d{1,2}:\d{2}\s*[ap]m)", show_text, re.IGNORECASE)
+            if not match and "show starts at" in show_text.lower():
+                match = re.search(r"show starts at\s*(\d{1,2}:\d{2}\s*[ap]m)", show_text, re.IGNORECASE)
+
+            if match:
+                combined = f"{date_text} {match.group(1)}"
+                parsed = parse_datetime_smart(combined)
+                if parsed:
+                    start_dt = parsed.isoformat()
+
+        return {
+            "title": title,
+            "start_dt": start_dt,
+            "location": "The Adelphia",
+            "source": "The Adelphia",
+            "url": event_url,
+        }
+
+    except Exception as e:
+        print(f"Adelphia detail parse failed: {event_url} -> {e}")
+        return {
+            "title": fallback_title,
+            "start_dt": None,
+            "location": "The Adelphia",
+            "source": "The Adelphia",
+            "url": event_url,
+        }
+
+
 def refresh_cache_if_needed(force: bool = False) -> None:
     ts = _cache.get("ts", 0) or 0
     if not force and (time.time() - ts) < CACHE_TTL_SECONDS and _cache.get("events"):
@@ -213,23 +266,14 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
     all_events: List[Dict[str, Any]] = []
 
-    # Adelphia sitemap titles for now
     event_urls = get_event_urls_from_sitemap(
         "https://www.theadelphia.com/adelphia_event-sitemap.xml"
     )
 
     for url in event_urls[:10]:
-        title = url.split("/")[-2].replace("-", " ").title()
-        all_events.append({
-            "title": title,
-            "start_dt": None,
-            "location": "The Adelphia",
-            "source": "The Adelphia",
-             "url": url,
-    })
+        event_data = get_adelphia_event_details(url)
+        all_events.append(event_data)
 
-
-    # Other sources
     for src in SOURCES:
         try:
             html = fetch_html(src["url"])
@@ -244,7 +288,6 @@ def refresh_cache_if_needed(force: bool = False) -> None:
             print(f"Source failed: {src['name']} -> {e}")
             continue
 
-    # Keep undated events. Only remove dated events clearly in the past.
     n = now_utc()
     filtered: List[Dict[str, Any]] = []
 
@@ -264,7 +307,6 @@ def refresh_cache_if_needed(force: bool = False) -> None:
         except Exception:
             filtered.append(e)
 
-    # Dated events first, undated after
     def sort_key(e: Dict[str, Any]):
         start_dt = e.get("start_dt")
         if not start_dt:
@@ -387,9 +429,6 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
     return out
 
 
-# ----------------------------
-# Routes
-# ----------------------------
 @app.get("/")
 def home():
     return "OK", 200
@@ -401,7 +440,7 @@ def health():
     return jsonify({
         "ok": True,
         "events_cached": len(_cache.get("events", [])),
-        "build": "clean-reset-v1",
+        "build": "clean-reset-v2",
     })
 
 
