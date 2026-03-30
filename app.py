@@ -2,7 +2,7 @@ import os
 import json
 import time
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone,timedelta
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -381,7 +381,8 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
                 sd = dtparser.isoparse(start_dt)
                 if sd.tzinfo is None:
                     sd = sd.replace(tzinfo=timezone.utc)
-                if sd.date() == now.date():
+                sd = sd.astimezone()
+                if sd.date() == now.astimezone().date():
                     out.append(e)
             except Exception:
                 continue
@@ -389,6 +390,13 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
 
     if intent == "weekend":
         out = []
+        local_now = now.astimezone()
+
+        # Find this coming Friday/Saturday/Sunday window
+        days_until_friday = (4 - local_now.weekday()) % 7
+        friday = (local_now + timedelta(days=days_until_friday)).date()
+        sunday = friday + timedelta(days=2)
+
         for e in events:
             start_dt = e.get("start_dt")
             if not start_dt:
@@ -397,7 +405,9 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
                 sd = dtparser.isoparse(start_dt)
                 if sd.tzinfo is None:
                     sd = sd.replace(tzinfo=timezone.utc)
-                if sd.weekday() in [4, 5, 6]:
+                sd = sd.astimezone()
+
+                if friday <= sd.date() <= sunday:
                     out.append(e)
             except Exception:
                 continue
