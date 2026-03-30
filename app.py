@@ -219,8 +219,14 @@ def refresh_cache_if_needed(force: bool = False) -> None:
     )
 
     for url in event_urls[:10]:
-        event_data = get_adelphia_event_details(url)
-        all_events.append(event_data)
+    title = url.split("/")[-2].replace("-", " ").title()
+    all_events.append({
+        "title": title,
+        "start_dt": None,
+        "location": "The Adelphia",
+        "source": "The Adelphia",
+        "url": url,
+    })
 
 
     # Other sources
