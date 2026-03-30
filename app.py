@@ -211,7 +211,18 @@ def extract_greater_parkersburg_events(html: str, source_name: str, source_url: 
             "location": "Greater Parkersburg Area",
             "source": source_name,
             "url": event_url,
-        })
+})
+        print("🔥 RUNNING GREATER PARKERSBURG PARSER")
+
+       # DEBUG BLOCK (separate, same indent level)
+        events.append({
+           "title": "DEBUG GREATER PARKERSBURG",
+           "start_dt": None,
+           "location": "Greater Parkersburg Area",
+           "source": source_name,
+           "url": source_url,
+})
+
 
     return events
 
