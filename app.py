@@ -286,7 +286,7 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
         flush_event()
 
     return events
-
+    
         start_dt = None
         if match:
             parsed = parse_datetime_smart(match.group(1))
