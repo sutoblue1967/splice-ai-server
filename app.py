@@ -217,14 +217,12 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
         title_line = current_title.strip()
         body = " ".join(current_text).strip()
 
-        # Skip clearly non-event items
         lowered = title_line.lower()
         if lowered in ["private painting and pottery parties", "camp creativity registration: now open"]:
             current_title = None
             current_text = []
             return
 
-        # Pull date/time from title first, then body
         combined = title_line + " " + body
 
         start_dt = None
@@ -236,14 +234,12 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
 
         if match:
             date_text = match.group(0)
-            # If no year present, assume current year
             if not re.search(r"\d{4}", date_text):
                 date_text = f"{date_text}, {now_utc().year}"
             parsed = parse_datetime_smart(date_text)
             if parsed:
                 start_dt = parsed.isoformat()
 
-        # Find a useful URL if one exists near the title
         event_url = source_url
         heading = soup.find(lambda tag: tag.name in ["h2", "h3"] and title_line in tag.get_text(" ", strip=True))
         if heading:
@@ -252,8 +248,15 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
                 href = next_link["href"]
                 event_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
 
+        clean_title = re.sub(
+            r":\s*(January|February|March|April|May|June|July|August|September|October|November|December).*",
+            "",
+            title_line,
+            flags=re.IGNORECASE
+        ).strip()
+
         events.append({
-            "title": re.sub(r":\s*(January|February|March|April|May|June|July|August|September|October|November|December).*", "", title_line, flags=re.IGNORECASE).strip(),
+            "title": clean_title,
             "start_dt": start_dt,
             "location": "Parkersburg Art Center",
             "source": source_name,
