@@ -209,62 +209,42 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
     current_text = []
 
     def flush_event():
-        nonlocal current_title, current_text, events
+    nonlocal current_title, current_text, events
 
-        if not current_title:
-            return
+    if not current_title:
+        return
 
-        title_line = current_title.strip()
-        body = " ".join(current_text).strip()
+    title_line = current_title.strip()
+    body = " ".join(current_text).strip()
 
-        lowered = title_line.lower()
-        if lowered in ["private painting and pottery parties", "camp creativity registration: now open"]:
-            current_title = None
-            current_text = []
-            return
+    combined = title_line + " " + body
 
-        combined = title_line + " " + body
+    start_dt = None
+    match = re.search(
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s*\d{4})?(?:,\s*\d{1,2}:\d{2}\s*[ap]m)?",
+        combined,
+        re.IGNORECASE
+    )
 
-        start_dt = None
-        match = re.search(
-            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?(?:,\s*\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?)?",
-            combined,
-            re.IGNORECASE
-        )
+    if match:
+        date_text = match.group(0)
+        parsed = parse_datetime_smart(date_text)
+        if parsed:
+            start_dt = parsed.isoformat()
 
-        if match:
-            date_text = match.group(0)
-            if not re.search(r"\d{4}", date_text):
-                date_text = f"{date_text}, {now_utc().year}"
-            parsed = parse_datetime_smart(date_text)
-            if parsed:
-                start_dt = parsed.isoformat()
+    event_url = source_url
 
-        event_url = source_url
-        heading = soup.find(lambda tag: tag.name in ["h2", "h3"] and title_line in tag.get_text(" ", strip=True))
-        if heading:
-            next_link = heading.find_next("a", href=True)
-            if next_link and next_link.get("href"):
-                href = next_link["href"]
-                event_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
+    events.append({
+        "title": title_line,
+        "start_dt": start_dt,
+        "location": "Parkersburg Art Center",
+        "source": source_name,
+        "url": event_url,
+    })
 
-        clean_title = re.sub(
-            r":\s*(January|February|March|April|May|June|July|August|September|October|November|December).*",
-            "",
-            title_line,
-            flags=re.IGNORECASE
-        ).strip()
+    current_title = None
+    current_text = []
 
-        events.append({
-            "title": clean_title,
-            "start_dt": start_dt,
-            "location": "Parkersburg Art Center",
-            "source": source_name,
-            "url": event_url,
-        })
-
-        current_title = None
-        current_text = []
 
     in_past_events = False
 
