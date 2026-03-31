@@ -225,43 +225,28 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
 
         combined = title_line + " " + body
 
-        clean_title = title_line
         start_dt = None
-
-        title_match = re.match(
-            r"^(.*?):\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?(.*)$",
-            title_line,
-            re.IGNORECASE
-        )
-
-        if title_match:
-            clean_title = title_match.group(1).strip()
-
-        date_match = re.search(
-            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?",
+        match = re.search(
+            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?(?:,\s*\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?)?",
             combined,
             re.IGNORECASE
         )
 
-        time_match = re.search(
-            r"(\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?(?:\s*-\s*\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?)?)",
-            combined,
-            re.IGNORECASE
-        )
-
-        if date_match:
-            date_text = date_match.group(0)
+        if match:
+            date_text = match.group(0)
             if not re.search(r"\d{4}", date_text):
                 date_text = f"{date_text}, {now_utc().year}"
-
-            parse_text = date_text
-            if time_match:
-                first_time = time_match.group(1).split("-")[0].strip()
-                parse_text = f"{date_text} {first_time}"
-
-            parsed = parse_datetime_smart(parse_text)
+            parsed = parse_datetime_smart(date_text)
             if parsed:
                 start_dt = parsed.isoformat()
+
+        clean_title = re.sub(
+            r":\s*(January|February|March|April|May|June|July|August|September|October|November|December).*",
+            "",
+            title_line,
+            flags=re.IGNORECASE
+        ).strip()
+
 
 
         events.append({
