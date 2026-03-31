@@ -225,35 +225,44 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
 
         combined = title_line + " " + body
 
+        clean_title = title_line
         start_dt = None
-        match = re.search(
-            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?(?:,\s*\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?)?",
+
+        title_match = re.match(
+            r"^(.*?):\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?(.*)$",
+            title_line,
+            re.IGNORECASE
+        )
+
+        if title_match:
+            clean_title = title_match.group(1).strip()
+
+        date_match = re.search(
+            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?",
             combined,
             re.IGNORECASE
         )
 
-        if match:
-            date_text = match.group(0)
+        time_match = re.search(
+            r"(\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?(?:\s*-\s*\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?)?)",
+            combined,
+            re.IGNORECASE
+        )
+
+        if date_match:
+            date_text = date_match.group(0)
             if not re.search(r"\d{4}", date_text):
                 date_text = f"{date_text}, {now_utc().year}"
-            parsed = parse_datetime_smart(date_text)
+
+            parse_text = date_text
+            if time_match:
+                first_time = time_match.group(1).split("-")[0].strip()
+                parse_text = f"{date_text} {first_time}"
+
+            parsed = parse_datetime_smart(parse_text)
             if parsed:
                 start_dt = parsed.isoformat()
 
-        event_url = source_url
-        heading = soup.find(lambda tag: tag.name in ["h2", "h3"] and title_line in tag.get_text(" ", strip=True))
-        if heading:
-            next_link = heading.find_next("a", href=True)
-            if next_link and next_link.get("href"):
-                href = next_link["href"]
-                event_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
-
-        clean_title = re.sub(
-            r":\s*(January|February|March|April|May|June|July|August|September|October|November|December).*",
-            "",
-            title_line,
-            flags=re.IGNORECASE
-        ).strip()
 
         events.append({
             "title": clean_title,
