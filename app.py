@@ -418,6 +418,8 @@ def refresh_cache_if_needed(force: bool = False) -> None:
         event_data = get_adelphia_event_details(url)
         all_events.append(event_data)
 
+    all_events.extend(MANUAL_EVENTS)
+
     for src in SOURCES:
         try:
             html = fetch_html(src["url"])
