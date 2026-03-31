@@ -33,6 +33,8 @@ MANUAL_EVENTS = [
     }
 ]
 
+SUBMITTED_EVENTS = []
+
 _cache: Dict[str, Any] = {
     "ts": 0,
     "events": [],
@@ -419,6 +421,7 @@ def refresh_cache_if_needed(force: bool = False) -> None:
         all_events.append(event_data)
 
     all_events.extend(MANUAL_EVENTS)
+    all_events.extend(SUBMITTED_EVENTS)
 
     for src in SOURCES:
         try:
@@ -659,6 +662,34 @@ def handle_chat():
 
     reply = intro + "\n\n" + reply_body + outro
     return jsonify({"message": reply}), 200
+
+@app.post("/submit-event")
+def submit_event():
+    data = request.get_json(force=True)
+
+    title = (data.get("title") or "").strip()
+    start_dt = (data.get("start_dt") or "").strip()
+    location = (data.get("location") or "").strip()
+    url = (data.get("url") or "").strip()
+    source = (data.get("source") or "Submitted").strip()
+
+    if not title:
+        return jsonify({"ok": False, "error": "title is required"}), 400
+
+    event = {
+        "title": title,
+        "start_dt": start_dt or None,
+        "location": location,
+        "source": source,
+        "url": url,
+    }
+
+    SUBMITTED_EVENTS.append(event)
+
+    # force refresh cache next request
+    _cache["ts"] = 0
+
+    return jsonify({"ok": True, "event": event}), 200
 
 @app.post("/chat")
 def chat():
