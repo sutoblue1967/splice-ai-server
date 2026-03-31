@@ -23,6 +23,15 @@ SOURCES = [
     {"name": "Greater Parkersburg", "url": "https://www.greaterparkersburg.com/events/"},
     {"name": "Parkersburg Art Center", "url": "https://www.parkersburgartcenter.org/upcomingcurrent-events"},
 ]
+MANUAL_EVENTS = [
+    {
+        "title": "Sample Manual Event",
+        "start_dt": "2026-04-05T18:00:00+00:00",
+        "location": "Parkersburg, WV",
+        "source": "Manual",
+        "url": ""
+    }
+]
 
 _cache: Dict[str, Any] = {
     "ts": 0,
