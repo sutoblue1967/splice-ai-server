@@ -208,13 +208,6 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
     current_title = None
     current_text = []
 
-    def extract_parkersburg_art_center_events(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
-    soup = BeautifulSoup(html, "html.parser")
-    events: List[Dict[str, Any]] = []
-
-    current_title = None
-    current_text = []
-
     def flush_event():
         nonlocal current_title, current_text, events
 
