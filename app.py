@@ -201,6 +201,92 @@ def extract_greater_parkersburg_events(html: str, source_name: str, source_url: 
             combined_text
         )
 
+def extract_parkersburg_art_center_events(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
+    soup = BeautifulSoup(html, "html.parser")
+    events: List[Dict[str, Any]] = []
+
+    current_title = None
+    current_text = []
+
+    def flush_event():
+        nonlocal current_title, current_text, events
+
+        if not current_title:
+            return
+
+        title_line = current_title.strip()
+        body = " ".join(current_text).strip()
+
+        # Skip clearly non-event items
+        lowered = title_line.lower()
+        if lowered in ["private painting and pottery parties", "camp creativity registration: now open"]:
+            current_title = None
+            current_text = []
+            return
+
+        # Pull date/time from title first, then body
+        combined = title_line + " " + body
+
+        start_dt = None
+        match = re.search(
+            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?(?:,\s*\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?)?",
+            combined,
+            re.IGNORECASE
+        )
+
+        if match:
+            date_text = match.group(0)
+            # If no year present, assume current year
+            if not re.search(r"\d{4}", date_text):
+                date_text = f"{date_text}, {now_utc().year}"
+            parsed = parse_datetime_smart(date_text)
+            if parsed:
+                start_dt = parsed.isoformat()
+
+        # Find a useful URL if one exists near the title
+        event_url = source_url
+        heading = soup.find(lambda tag: tag.name in ["h2", "h3"] and title_line in tag.get_text(" ", strip=True))
+        if heading:
+            next_link = heading.find_next("a", href=True)
+            if next_link and next_link.get("href"):
+                href = next_link["href"]
+                event_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
+
+        events.append({
+            "title": re.sub(r":\s*(January|February|March|April|May|June|July|August|September|October|November|December).*", "", title_line, flags=re.IGNORECASE).strip(),
+            "start_dt": start_dt,
+            "location": "Parkersburg Art Center",
+            "source": source_name,
+            "url": event_url,
+        })
+
+        current_title = None
+        current_text = []
+
+    in_past_events = False
+
+    for tag in soup.find_all(["h1", "h2", "h3", "p"]):
+        text = tag.get_text(" ", strip=True)
+        if not text:
+            continue
+
+        if text.strip().upper() == "PAST EVENTS":
+            flush_event()
+            in_past_events = True
+            break
+
+        if tag.name == "h3":
+            flush_event()
+            current_title = text
+            current_text = []
+        elif current_title:
+            current_text.append(text)
+
+    if not in_past_events:
+        flush_event()
+
+    return events
+
         start_dt = None
         if match:
             parsed = parse_datetime_smart(match.group(1))
@@ -358,6 +444,8 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
             if src["name"] == "Greater Parkersburg":
                 extracted = extract_greater_parkersburg_events(html, src["name"], src["url"])
+            elif src["name"] == "Parkersburg Art Center":
+                extracted = extract_parkersburg_art_center_events(html, src["name"], src["url"])
             else:
                 extracted = extract_events_from_jsonld(html, src["name"], src["url"])
                 if not extracted:
