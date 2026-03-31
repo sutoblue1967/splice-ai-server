@@ -33,7 +33,8 @@ MANUAL_EVENTS = [
     }
 ]
 
-SUBMITTED_EVENTS = []
+PENDING_EVENTS = []
+APPROVED_EVENTS = []
 
 _cache: Dict[str, Any] = {
     "ts": 0,
@@ -421,7 +422,7 @@ def refresh_cache_if_needed(force: bool = False) -> None:
         all_events.append(event_data)
 
     all_events.extend(MANUAL_EVENTS)
-    all_events.extend(SUBMITTED_EVENTS)
+    all_events.extend(APPROVED_EVENTS)
 
     for src in SOURCES:
         try:
