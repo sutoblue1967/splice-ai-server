@@ -240,14 +240,20 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
             if parsed:
                 start_dt = parsed.isoformat()
 
+        event_url = source_url
+        heading = soup.find(lambda tag: tag.name in ["h2", "h3"] and title_line in tag.get_text(" ", strip=True))
+        if heading:
+            next_link = heading.find_next("a", href=True)
+            if next_link and next_link.get("href"):
+                href = next_link["href"]
+                event_url = href if href.startswith("http") else source_url.rstrip("/") + "/" + href.lstrip("/")
+
         clean_title = re.sub(
             r":\s*(January|February|March|April|May|June|July|August|September|October|November|December).*",
             "",
             title_line,
             flags=re.IGNORECASE
         ).strip()
-
-
 
         events.append({
             "title": clean_title,
@@ -283,6 +289,7 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
         flush_event()
 
     return events
+
 
 
 
