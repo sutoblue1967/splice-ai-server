@@ -42,6 +42,21 @@ _cache: Dict[str, Any] = {
     "events": [],
 }
 
+@app.get("/test-add-event")
+def test_add_event():
+    event = {
+        "title": "Test Event 🔥",
+        "start_dt": None,
+        "location": "Parkersburg, WV",
+        "source": "Test",
+        "url": ""
+    }
+
+    PENDING_EVENTS.append(event)
+    _cache["ts"] = 0
+
+    return {"ok": True, "message": "Test event added"}
+
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
