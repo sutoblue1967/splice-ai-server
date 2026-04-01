@@ -28,11 +28,9 @@ MANUAL_EVENTS = [
     {
         "title": "Sample Manual Event",
         "start_dt": "2026-04-05T18:00:00+00:00",
-        "end_dt": "2026-04-05T21:00:00+00:00",
         "location": "Parkersburg, WV",
         "source": "Manual",
         "url": "",
-        "category": "right_now",
     }
 ]
 
@@ -98,7 +96,6 @@ def get_event_urls_from_sitemap(sitemap_url: str) -> List[str]:
     try:
         r = requests.get(sitemap_url, headers={"User-Agent": USER_AGENT}, timeout=10)
         r.raise_for_status()
-
         root = ET.fromstring(r.text)
 
         for url in root.findall(".//{*}loc"):
@@ -186,7 +183,6 @@ def extract_events_from_html(html: str, source_name: str, source_url: str) -> Li
 
 
 def extract_greater_parkersburg_events(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
-    # Site is blocking requests right now; keep this safe and quiet.
     return []
 
 
@@ -301,11 +297,8 @@ def extract_events_from_jsonld(html: str, source_name: str, source_url: str) -> 
 
             title = (node.get("name") or "").strip()
             start = node.get("startDate") or node.get("start_date") or ""
-            end = node.get("endDate") or ""
             event_url = node.get("url") or source_url
-
             start_dt = parse_datetime_smart(str(start))
-            end_dt = parse_datetime_smart(str(end)) if end else None
             loc = normalize_location(node.get("location"))
 
             if not title:
@@ -314,7 +307,6 @@ def extract_events_from_jsonld(html: str, source_name: str, source_url: str) -> 
             events.append({
                 "title": title,
                 "start_dt": start_dt.isoformat() if start_dt else None,
-                "end_dt": end_dt.isoformat() if end_dt else None,
                 "location": loc,
                 "source": source_name,
                 "url": event_url,
@@ -350,12 +342,8 @@ def get_adelphia_event_details(event_url: str) -> Dict[str, Any]:
                 show_text = lines[i + 1]
 
         start_dt = None
-
         if date_text and show_text:
             match = re.search(r"(\d{1,2}:\d{2}\s*[ap]m)", show_text, re.IGNORECASE)
-            if not match and "show starts at" in show_text.lower():
-                match = re.search(r"show starts at\s*(\d{1,2}:\d{2}\s*[ap]m)", show_text, re.IGNORECASE)
-
             if match:
                 combined = f"{date_text} {match.group(1)}"
                 parsed = parse_datetime_smart(combined)
@@ -389,10 +377,8 @@ def refresh_cache_if_needed(force: bool = False) -> None:
     all_events: List[Dict[str, Any]] = []
 
     event_urls = get_event_urls_from_sitemap("https://www.theadelphia.com/adelphia_event-sitemap.xml")
-
     for url in event_urls[:10]:
-        event_data = get_adelphia_event_details(url)
-        all_events.append(event_data)
+        all_events.append(get_adelphia_event_details(url))
 
     all_events.extend(MANUAL_EVENTS)
     all_events.extend(APPROVED_EVENTS)
@@ -421,7 +407,6 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
     for e in all_events:
         start_dt = e.get("start_dt")
-
         if not start_dt:
             filtered.append(e)
             continue
@@ -445,37 +430,6 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
     _cache["ts"] = time.time()
     _cache["events"] = filtered
-
-
-def filter_right_now(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    now = now_utc()
-    active = []
-
-    for e in events:
-        if e.get("category") != "right_now":
-            continue
-
-        start_dt = e.get("start_dt")
-        end_dt = e.get("end_dt")
-
-        if not start_dt or not end_dt:
-            continue
-
-        try:
-            start = dtparser.isoparse(start_dt)
-            end = dtparser.isoparse(end_dt)
-
-            if start.tzinfo is None:
-                start = start.replace(tzinfo=timezone.utc)
-            if end.tzinfo is None:
-                end = end.replace(tzinfo=timezone.utc)
-
-            if start <= now <= end:
-                active.append(e)
-        except Exception:
-            continue
-
-    return active
 
 
 def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
@@ -509,9 +463,6 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
 
 def classify_query(msg: str) -> str:
     m = msg.lower()
-
-    if "right now" in m or "happening now" in m or "going on now" in m or "what should i do now" in m:
-        return "right_now"
 
     if any(k in m for k in ["music", "live music", "band", "concert", "show"]):
         return "music"
@@ -616,7 +567,7 @@ def health():
     return jsonify({
         "ok": True,
         "events_cached": len(_cache.get("events", [])),
-        "build": "clean-reset-v3",
+        "build": "stable-reset-v1",
     })
 
 
@@ -641,26 +592,19 @@ def handle_chat():
 
     intent = classify_query(msg)
     events = _cache.get("events", [])
-
-    if intent == "right_now":
-        scoped = filter_right_now(events)
-    else:
-        scoped = filter_by_intent(events, intent)
+    scoped = filter_by_intent(events, intent)
 
     if msg.lower() in ["hi", "hello", "hey"]:
         return jsonify({
             "message": (
                 f"Hi, I’m {EL_NAME} — your insider for everything happening around the MOV.\n\n"
-                "Try asking for music, art, classes, family events, weekend plans, or what’s happening right now."
+                "Try asking for music, art, classes, family events, or a general event question."
             )
         }), 200
 
     reply_body = format_events(scoped, limit=6)
 
-    if intent == "right_now":
-        intro = "Here’s what’s happening right now:"
-        outro = "\n\nWant me to keep going with right now, or switch to music, family, art, or weekend events?"
-    elif intent == "weekend":
+    if intent == "weekend":
         intro = "Here are some great events I found for this weekend:"
         outro = "\n\nWant me to narrow that down to music, family-friendly, art, or classes?"
     elif intent == "music":
@@ -671,4 +615,58 @@ def handle_chat():
         outro = "\n\nWant me to keep going with art, or switch to music, family, or weekend events?"
     elif intent == "family":
         intro = "Here are some family-friendly events I found:"
-        outro = "\n\nWant more family options,
+        outro = "\n\nWant more family options, or want me to look for music or art?"
+    elif intent == "classes":
+        intro = "Here are some classes and workshops I found:"
+        outro = "\n\nWant me to keep looking for classes, or switch to music, art, or family events?"
+    elif intent == "today":
+        intro = "Here’s what’s happening today:"
+        outro = "\n\nWant me to look for this weekend, or by category?"
+    else:
+        intro = "Here are some great events I found:"
+        outro = "\n\nWant me to narrow it down by music, family-friendly, art, classes, or today?"
+
+    reply = f"{intro}\n\n{reply_body}{outro}"
+    return jsonify({"message": reply}), 200
+
+
+@app.post("/submit-event")
+def submit_event():
+    data = request.get_json(force=True)
+
+    title = (data.get("title") or "").strip()
+    start_dt = (data.get("start_dt") or "").strip()
+    location = (data.get("location") or "").strip()
+    url = (data.get("url") or "").strip()
+    source = (data.get("source") or "Pending Submission").strip()
+
+    if not title:
+        return jsonify({"ok": False, "error": "title is required"}), 400
+
+    event = {
+        "title": title,
+        "start_dt": start_dt or None,
+        "location": location,
+        "source": source,
+        "url": url,
+    }
+
+    PENDING_EVENTS.append(event)
+    _cache["ts"] = 0
+
+    return jsonify({"ok": True, "event": event}), 200
+
+
+@app.post("/chat")
+def chat():
+    return handle_chat()
+
+
+@app.post("/el-chat/chat")
+def el_chat_chat():
+    return handle_chat()
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "10000"))
+    app.run(host="0.0.0.0", port=port)
