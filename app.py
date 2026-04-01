@@ -534,7 +534,7 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
 def classify_query(msg: str) -> str:
     m = msg.lower()
 
-    if any(x in msg for x in ["right now", "happening now", "going on now", "tonight", "what should i do now"]):
+    if any(x in m for x in ["right now", "happening now", "going on now", "tonight", "what should i do now"]):
         return "right_now”
     if any(k in m for k in ["music", "live music", "band", "concert", "show"]):
         return "music"
