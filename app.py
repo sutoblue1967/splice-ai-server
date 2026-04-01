@@ -652,6 +652,33 @@ def pending_events():
         mimetype="application/json",
     )
     
+@app.get("/test-add-brewery-deal")
+def test_add_brewery_deal():
+    event = {
+        "title": "Parkersburg Brewing Co. - $10 cheeseburger special until 10 PM",
+        "start_dt": None,
+        "location": "Parkersburg Brewing Co., Parkersburg, WV",
+        "source": "Manual Test",
+        "url": "",
+    }
+
+    PENDING_EVENTS.append(event)
+    _cache["ts"] = 0
+
+    return {"ok": True, "message": "Brewery deal added to pending"}
+
+
+@app.get("/approve-latest")
+def approve_latest():
+    if not PENDING_EVENTS:
+        return {"ok": False, "message": "No pending events to approve"}, 404
+
+    event = PENDING_EVENTS.pop()
+    APPROVED_EVENTS.append(event)
+    _cache["ts"] = 0
+
+    return {"ok": True, "message": "Latest pending event approved", "event": event}
+    
 @app.post("/submit-event")
 def submit_event():
     data = request.get_json(force=True)
