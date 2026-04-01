@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 import requests
 from bs4 import BeautifulSoup
 from dateutil import parser as dtparser
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 import xml.etree.ElementTree as ET
 
@@ -678,6 +678,123 @@ def approve_latest():
     _cache["ts"] = 0
 
     return {"ok": True, "message": "Latest pending event approved", "event": event}
+
+@app.get("/add-event")
+def add_event_form():
+    html = """
+    <!doctype html>
+    <html>
+    <head>
+        <title>Add Event</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 700px;
+                margin: 40px auto;
+                padding: 20px;
+                background: #f8f8f8;
+            }
+            h1 {
+                margin-bottom: 20px;
+            }
+            form {
+                background: white;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            }
+            label {
+                display: block;
+                margin-top: 15px;
+                font-weight: bold;
+            }
+            input, textarea, button {
+                width: 100%;
+                padding: 10px;
+                margin-top: 6px;
+                font-size: 16px;
+                box-sizing: border-box;
+            }
+            button {
+                margin-top: 20px;
+                background: #e85d5d;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+            button:hover {
+                background: #d94c4c;
+            }
+            .note {
+                margin-top: 15px;
+                color: #666;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Add Event</h1>
+        <form method="post" action="/submit-event-form">
+            <label>Title</label>
+            <input type="text" name="title" required>
+
+            <label>Start Date/Time</label>
+            <input type="text" name="start_dt" placeholder="2026-04-05T18:00:00+00:00">
+
+            <label>Location</label>
+            <input type="text" name="location">
+
+            <label>Source</label>
+            <input type="text" name="source" value="Manual Entry">
+
+            <label>URL</label>
+            <input type="text" name="url">
+
+            <button type="submit">Submit to Pending</button>
+
+            <div class="note">
+                This sends the event to pending review first.
+            </div>
+        </form>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
+
+
+@app.post("/submit-event-form")
+def submit_event_form():
+    title = (request.form.get("title") or "").strip()
+    start_dt = (request.form.get("start_dt") or "").strip()
+    location = (request.form.get("location") or "").strip()
+    source = (request.form.get("source") or "Manual Entry").strip()
+    url = (request.form.get("url") or "").strip()
+
+    if not title:
+        return "Title is required", 400
+
+    event = {
+        "title": title,
+        "start_dt": start_dt or None,
+        "location": location,
+        "source": source,
+        "url": url,
+    }
+
+    PENDING_EVENTS.append(event)
+    _cache["ts"] = 0
+
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px;">
+        <h2>Event submitted to pending</h2>
+        <p><strong>{title}</strong></p>
+        <p><a href="/pending-events">View Pending Events</a></p>
+        <p><a href="/add-event">Add Another Event</a></p>
+    </body>
+    </html>
+    """
     
 @app.post("/submit-event")
 def submit_event():
