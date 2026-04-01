@@ -647,9 +647,11 @@ def handle_chat():
     events = _cache.get("events", [])
 
     if intent == "right_now":
-    scoped = filter_right_now(events)
-    else:
-    scoped = filter_by_intent(events, intent)
+    intro = "Here’s what’s happening right now:"
+    outro = "\n\nWant me to keep going with right now, or switch to music, family, art, or weekend events?"
+    elif intent == "weekend":
+    intro = "Here are some great events I found for this weekend:"
+    outro = "\n\nWant me to narrow that down to music, family-friendly, art, or classes?”
 
 
     if msg.lower() in ["hi", "hello", "hey"]:
