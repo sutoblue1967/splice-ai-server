@@ -2,7 +2,7 @@ import os
 import json
 import time
 import re
-from datetime import datetime, timezone,timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -23,6 +23,7 @@ SOURCES = [
     {"name": "Greater Parkersburg", "url": "https://www.greaterparkersburg.com/events/"},
     {"name": "Parkersburg Art Center", "url": "https://www.parkersburgartcenter.org/upcomingcurrent-events"},
 ]
+
 MANUAL_EVENTS = [
     {
         "title": "Sample Manual Event",
@@ -31,12 +32,12 @@ MANUAL_EVENTS = [
         "location": "Parkersburg, WV",
         "source": "Manual",
         "url": "",
-        "category": "right_now"
+        "category": "right_now",
     }
 ]
 
-PENDING_EVENTS = []
-APPROVED_EVENTS = []
+PENDING_EVENTS: List[Dict[str, Any]] = []
+APPROVED_EVENTS: List[Dict[str, Any]] = []
 
 _cache: Dict[str, Any] = {
     "ts": 0,
@@ -50,7 +51,10 @@ def now_utc() -> datetime:
 
 def fetch_html(url: str) -> str:
     headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+        ),
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "Cache-Control": "no-cache",
@@ -73,7 +77,7 @@ def safe_json_loads(s: str) -> Optional[Any]:
 def flatten_jsonld(obj: Any) -> List[Dict[str, Any]]:
     nodes: List[Dict[str, Any]] = []
 
-    def walk(x: Any):
+    def walk(x: Any) -> None:
         if isinstance(x, dict):
             if "@graph" in x and isinstance(x["@graph"], list):
                 for g in x["@graph"]:
@@ -180,49 +184,20 @@ def extract_events_from_html(html: str, source_name: str, source_url: str) -> Li
 
     return events
 
+
 def extract_greater_parkersburg_events(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
-    soup = BeautifulSoup(html, "html.parser")
-    events: List[Dict[str, Any]] = []
+    # Site is blocking requests right now; keep this safe and quiet.
+    return []
 
-    headings = soup.find_all(["h2", "h3"])
-
-    for heading in headings:
-        title = heading.get_text(" ", strip=True)
-        if not title or len(title) < 5:
-            continue
-
-        # Look at nearby text after the heading
-        block_text = []
-        for sib in heading.next_siblings:
-            text = ""
-            if hasattr(sib, "get_text"):
-                text = sib.get_text(" ", strip=True)
-            else:
-                text = str(sib).strip()
-
-            if text:
-                block_text.append(text)
-
-            # Stop once we hit a read-more area or after enough nearby text
-            if "Read more" in text or len(block_text) >= 6:
-                break
-
-        combined_text = " ".join(block_text)
-
-        # Match lines like: April 2, 2026, 7:00 pm
-        match = re.search(
-            r"([A-Z][a-z]+ \d{1,2}, \d{4}, \d{1,2}:\d{2} [ap]m)",
-            combined_text
-        )
 
 def extract_parkersburg_art_center_events(html: str, source_name: str, source_url: str) -> List[Dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
     events: List[Dict[str, Any]] = []
 
     current_title = None
-    current_text = []
+    current_text: List[str] = []
 
-    def flush_event():
+    def flush_event() -> None:
         nonlocal current_title, current_text, events
 
         if not current_title:
@@ -243,7 +218,7 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
         match = re.search(
             r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,\s*\d{4})?(?:,\s*\d{1,2}(?::\d{2})?\s*[ap]\.?\s*m\.?)?",
             combined,
-            re.IGNORECASE
+            re.IGNORECASE,
         )
 
         if match:
@@ -266,7 +241,7 @@ def extract_parkersburg_art_center_events(html: str, source_name: str, source_ur
             r":\s*(January|February|March|April|May|June|July|August|September|October|November|December).*",
             "",
             title_line,
-            flags=re.IGNORECASE
+            flags=re.IGNORECASE,
         ).strip()
 
         events.append({
@@ -413,9 +388,7 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
     all_events: List[Dict[str, Any]] = []
 
-    event_urls = get_event_urls_from_sitemap(
-        "https://www.theadelphia.com/adelphia_event-sitemap.xml"
-    )
+    event_urls = get_event_urls_from_sitemap("https://www.theadelphia.com/adelphia_event-sitemap.xml")
 
     for url in event_urls[:10]:
         event_data = get_adelphia_event_details(url)
@@ -473,6 +446,7 @@ def refresh_cache_if_needed(force: bool = False) -> None:
     _cache["ts"] = time.time()
     _cache["events"] = filtered
 
+
 def filter_right_now(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     now = now_utc()
     active = []
@@ -510,11 +484,20 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
 
     lines = []
     for e in events[:limit]:
-        title = e.get("title", "Event").strip()
-        location = e.get("location", "").strip()
+        title = str(e.get("title", "Event")).strip()
+        location = str(e.get("location", "")).strip()
         start_dt = e.get("start_dt")
 
         nice = "Date coming soon"
+        if start_dt:
+            try:
+                sd = dtparser.isoparse(start_dt)
+                if sd.tzinfo is None:
+                    sd = sd.replace(tzinfo=timezone.utc)
+                sd = sd.astimezone()
+                nice = sd.strftime("%a, %b %d at %I:%M %p").replace(" 0", " ")
+            except Exception:
+                nice = "Date coming soon"
 
         if location:
             lines.append(f"{title}\n{nice}\n{location}")
@@ -525,7 +508,30 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
 
 
 def classify_query(msg: str) -> str:
-    return "general”
+    m = msg.lower()
+
+    if "right now" in m or "happening now" in m or "going on now" in m or "what should i do now" in m:
+        return "right_now"
+
+    if any(k in m for k in ["music", "live music", "band", "concert", "show"]):
+        return "music"
+
+    if any(k in m for k in ["art", "exhibit", "gallery"]):
+        return "art"
+
+    if any(k in m for k in ["class", "classes", "workshop", "camp"]):
+        return "classes"
+
+    if any(k in m for k in ["family", "kids", "kid", "children", "child"]):
+        return "family"
+
+    if any(k in m for k in ["weekend", "this weekend", "friday", "saturday"]):
+        return "weekend"
+
+    if any(k in m for k in ["today", "tonight"]):
+        return "today"
+
+    return "general"
 
 
 def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str, Any]]:
@@ -554,8 +560,6 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
     if intent == "weekend":
         out = []
         local_now = now.astimezone()
-
-        # Find this coming Friday/Saturday/Sunday window
         days_until_friday = (4 - local_now.weekday()) % 7
         friday = (local_now + timedelta(days=days_until_friday)).date()
         sunday = friday + timedelta(days=2)
@@ -569,7 +573,6 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
                 if sd.tzinfo is None:
                     sd = sd.replace(tzinfo=timezone.utc)
                 sd = sd.astimezone()
-
                 if friday <= sd.date() <= sunday:
                     out.append(e)
             except Exception:
@@ -613,7 +616,7 @@ def health():
     return jsonify({
         "ok": True,
         "events_cached": len(_cache.get("events", [])),
-        "build": "clean-reset-v2",
+        "build": "clean-reset-v3",
     })
 
 
@@ -640,18 +643,15 @@ def handle_chat():
     events = _cache.get("events", [])
 
     if intent == "right_now":
-    intro = "Here’s what’s happening right now:"
-    outro = "\n\nWant me to keep going with right now, or switch to music, family, art, or weekend events?"
-    elif intent == "weekend":
-    intro = "Here are some great events I found for this weekend:"
-    outro = "\n\nWant me to narrow that down to music, family-friendly, art, or classes?”
-
+        scoped = filter_right_now(events)
+    else:
+        scoped = filter_by_intent(events, intent)
 
     if msg.lower() in ["hi", "hello", "hey"]:
         return jsonify({
             "message": (
                 f"Hi, I’m {EL_NAME} — your insider for everything happening around the MOV.\n\n"
-                "Try asking for music, art, classes, family events, or a general event question."
+                "Try asking for music, art, classes, family events, weekend plans, or what’s happening right now."
             )
         }), 200
 
@@ -661,9 +661,8 @@ def handle_chat():
         intro = "Here’s what’s happening right now:"
         outro = "\n\nWant me to keep going with right now, or switch to music, family, art, or weekend events?"
     elif intent == "weekend":
-    if intent == "weekend":
         intro = "Here are some great events I found for this weekend:"
-        outro = "\n\nWant me to narrow that down to music, family-friendly, or something more laid-back?"
+        outro = "\n\nWant me to narrow that down to music, family-friendly, art, or classes?"
     elif intent == "music":
         intro = "Here are some music events I found:"
         outro = "\n\nWant more like this, or want me to look for something family-friendly or artsy?"
@@ -672,60 +671,4 @@ def handle_chat():
         outro = "\n\nWant me to keep going with art, or switch to music, family, or weekend events?"
     elif intent == "family":
         intro = "Here are some family-friendly events I found:"
-        outro = "\n\nWant more family options, or want me to look for music or weekend events too?"
-    elif intent == "classes":
-        intro = "Here are some classes and workshops I found:"
-        outro = "\n\nWant me to keep looking for classes, or switch to music, family, or weekend events?"
-    else:
-        intro = "Here are some great events I found:"
-        outro = "\n\nWant me to narrow it down by music, family-friendly, art, or this weekend?"
-
-    reply = intro + "\n\n" + reply_body + outro
-    return jsonify({"message": reply}), 200
-
-@app.post("/submit-event")
-def submit_event():
-    data = request.get_json(force=True)
-
-    title = (data.get("title") or "").strip()
-    start_dt = (data.get("start_dt") or "").strip()
-    end_dt = (data.get("end_dt") or "").strip()
-    location = (data.get("location") or "").strip()
-    url = (data.get("url") or "").strip()
-    source = (data.get("source") or "Pending Submission").strip()
-    category = (data.get("category") or "event").strip()
-
-
-    if not title:
-        return jsonify({"ok": False, "error": "title is required"}), 400
-
-    event = {
-    "title": title,
-    "start_dt": start_dt or None,
-    "end_dt": end_dt or None,
-    "location": location,
-    "source": source,
-    "url": url,
-    "category": category,
-}
-
-    PENDING_EVENTS.append(event)
-
-    # force refresh cache next request
-    _cache["ts"] = 0
-
-    return jsonify({"ok": True, "event": event}), 200
-
-@app.post("/chat")
-def chat():
-    return handle_chat()
-
-
-@app.post("/el-chat/chat")
-def el_chat_chat():
-    return handle_chat()
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "10000"))
-    app.run(host="0.0.0.0", port=port)
+        outro = "\n\nWant more family options,
