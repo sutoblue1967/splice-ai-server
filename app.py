@@ -506,7 +506,7 @@ def filter_right_now(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
     if not events:
-        return "I’m not seeing any upcoming events from my current sources yet. Try music, art, classes, family, or a general event question."
+        return "I’m not seeing any upcoming events from my current sources."
 
     lines = []
     for e in events[:limit]:
@@ -514,14 +514,7 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
         location = e.get("location", "").strip()
         start_dt = e.get("start_dt")
 
-        if start_dt:
-            try:
-                sd = dtparser.isoparse(start_dt).astimezone()
-                nice = sd.strftime("%a, %b %d at %I:%M %p").replace(" 0", " ").replace("at 0", "at ")
-            except Exception:
-                nice = "Date coming soon"
-        else:
-            nice = "Date coming soon"
+        nice = "Date coming soon"
 
         if location:
             lines.append(f"{title}\n{nice}\n{location}")
