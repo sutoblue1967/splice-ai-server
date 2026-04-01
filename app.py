@@ -582,7 +582,7 @@ def health():
     return jsonify({
         "ok": True,
         "events_cached": len(_cache.get("events", [])),
-        "build": "stable-reset-v1",
+        "build": "stable-reset-v2-approve",
     })
 
 
