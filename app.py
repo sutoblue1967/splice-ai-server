@@ -534,22 +534,29 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
 def classify_query(msg: str) -> str:
     m = msg.lower()
 
-    if any(x in m for x in ["right now", "happening now", "going on now", "tonight", "what should i do now"]):
-        return "right_now”
+    # RIGHT NOW (single-line to avoid indentation issues)
+    if "right now" in m or "happening now" in m or "going on now" in m or "what should i do now" in m:
+        return "right_now"
+
     if any(k in m for k in ["music", "live music", "band", "concert", "show"]):
         return "music"
+
     if any(k in m for k in ["art", "exhibit", "gallery"]):
         return "art"
+
     if any(k in m for k in ["class", "classes", "workshop", "camp"]):
         return "classes"
+
     if any(k in m for k in ["family", "kids", "kid", "children", "child"]):
         return "family"
-    if any(k in m for k in ["weekend", "this weekend", "friday", "saturday", "sunday"]):
+
+    if any(k in m for k in ["weekend", "this weekend", "friday", "saturday"]):
         return "weekend"
+
     if any(k in m for k in ["today", "tonight"]):
         return "today"
 
-    return "general"
+    return "general”
 
 
 def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str, Any]]:
