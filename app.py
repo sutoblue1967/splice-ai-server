@@ -672,7 +672,7 @@ def submit_event():
     start_dt = (data.get("start_dt") or "").strip()
     location = (data.get("location") or "").strip()
     url = (data.get("url") or "").strip()
-    source = (data.get("source") or "Submitted").strip()
+    source = (data.get("source") or "Pending Submission").strip()
 
     if not title:
         return jsonify({"ok": False, "error": "title is required"}), 400
@@ -685,7 +685,7 @@ def submit_event():
         "url": url,
     }
 
-    SUBMITTED_EVENTS.append(event)
+    PENDING_EVENTS.append(event)
 
     # force refresh cache next request
     _cache["ts"] = 0
