@@ -628,7 +628,7 @@ def handle_chat():
 
     reply = f"{intro}\n\n{reply_body}{outro}"
     return jsonify({"message": reply}), 200
-.
+
 @app.get("/pending-events")
 def pending_events():
     return app.response_class(
