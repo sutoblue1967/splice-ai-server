@@ -604,6 +604,8 @@ def handle_chat():
         return jsonify({"message": "Message is required"}), 400
 
     refresh_cache_if_needed(force=True)
+    events = _cache.get("events", [])
+
 
     intent = classify_query(msg)
     events = _cache.get("events", [])
@@ -675,7 +677,7 @@ def approve_latest():
 
     event = PENDING_EVENTS.pop()
     APPROVED_EVENTS.append(event)
-    _cache["ts"] = 0
+    refresh_cache_if_needed(force=True)
 
     return {"ok": True, "message": "Latest pending event approved", "event": event}
 
