@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
 CORS(app)
+load_persistent_events()
 
 EL_NAME = "El"
 CACHE_TTL_SECONDS = 6 * 60 * 60
@@ -33,6 +34,9 @@ MANUAL_EVENTS = [
         "url": "",
     }
 ]
+
+PENDING_EVENTS_FILE = "pending_events.json"
+APPROVED_EVENTS_FILE = "approved_events.json"
 
 PENDING_EVENTS: List[Dict[str, Any]] = []
 APPROVED_EVENTS: List[Dict[str, Any]] = []
@@ -60,6 +64,34 @@ def test_add_event():
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
+
+def load_events_from_file(filename: str) -> List[Dict[str, Any]]:
+    if not os.path.exists(filename):
+        return []
+
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+    except Exception as e:
+        print(f"Failed loading {filename}: {e}")
+
+    return []
+
+
+def save_events_to_file(filename: str, events: List[Dict[str, Any]]) -> None:
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(events, f, indent=2)
+    except Exception as e:
+        print(f"Failed saving {filename}: {e}")
+
+
+def load_persistent_events() -> None:
+    global PENDING_EVENTS, APPROVED_EVENTS
+    PENDING_EVENTS = load_events_from_file(PENDING_EVENTS_FILE)
+    APPROVED_EVENTS = load_events_from_file(APPROVED_EVENTS_FILE)
 
 
 def fetch_html(url: str) -> str:
@@ -921,6 +953,7 @@ def submit_event_form():
     }
 
     PENDING_EVENTS.append(event)
+    save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
     _cache["ts"] = 0
 
     return f"""
