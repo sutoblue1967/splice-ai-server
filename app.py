@@ -26,6 +26,8 @@ def load_events_from_file(filename: str) -> List[Dict[str, Any]]:
 
     return []
 
+PENDING_EVENTS_FILE = "pending_events.json"
+APPROVED_EVENTS_FILE = "approved_events.json"
 
 def save_events_to_file(filename: str, events: List[Dict[str, Any]]) -> None:
     try:
@@ -61,8 +63,6 @@ MANUAL_EVENTS = [
     }
 ]
 
-PENDING_EVENTS_FILE = "pending_events.json"
-APPROVED_EVENTS_FILE = "approved_events.json"
 
 PENDING_EVENTS: List[Dict[str, Any]] = []
 APPROVED_EVENTS: List[Dict[str, Any]] = []
