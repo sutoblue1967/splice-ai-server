@@ -796,12 +796,16 @@ def add_event_form():
                 margin-top: 15px;
                 font-weight: bold;
             }
-            input, textarea, button {
+            input, textarea, select, button {
                 width: 100%;
                 padding: 10px;
                 margin-top: 6px;
                 font-size: 16px;
                 box-sizing: border-box;
+            }
+            textarea {
+                min-height: 100px;
+                resize: vertical;
             }
             button {
                 margin-top: 20px;
@@ -830,6 +834,9 @@ def add_event_form():
             <label>Start Date/Time</label>
             <input type="text" name="start_dt" placeholder="2026-04-05T18:00:00+00:00">
 
+            <label>End Date/Time</label>
+            <input type="text" name="end_dt" placeholder="2026-04-05T22:00:00+00:00">
+
             <label>Location</label>
             <input type="text" name="location">
 
@@ -838,6 +845,20 @@ def add_event_form():
 
             <label>URL</label>
             <input type="text" name="url">
+
+            <label>Category</label>
+            <select name="category">
+                <option value="event">Event</option>
+                <option value="right_now">Right Now</option>
+                <option value="music">Music</option>
+                <option value="art">Art</option>
+                <option value="family">Family</option>
+                <option value="food">Food</option>
+                <option value="classes">Classes</option>
+            </select>
+
+            <label>Description</label>
+            <textarea name="description" placeholder="Short description..."></textarea>
 
             <button type="submit">Submit to Pending</button>
 
@@ -855,9 +876,12 @@ def add_event_form():
 def submit_event_form():
     title = (request.form.get("title") or "").strip()
     start_dt = (request.form.get("start_dt") or "").strip()
+    end_dt = (request.form.get("end_dt") or "").strip()
     location = (request.form.get("location") or "").strip()
     source = (request.form.get("source") or "Manual Entry").strip()
     url = (request.form.get("url") or "").strip()
+    category = (request.form.get("category") or "event").strip()
+    description = (request.form.get("description") or "").strip()
 
     if not title:
         return "Title is required", 400
@@ -865,9 +889,12 @@ def submit_event_form():
     event = {
         "title": title,
         "start_dt": start_dt or None,
+        "end_dt": end_dt or None,
         "location": location,
         "source": source,
         "url": url,
+        "category": category,
+        "description": description,
     }
 
     PENDING_EVENTS.append(event)
@@ -878,8 +905,9 @@ def submit_event_form():
     <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px;">
         <h2>Event submitted to pending</h2>
         <p><strong>{title}</strong></p>
-        <p><a href="/pending-events">View Pending Events</a></p>
+        <p><a href="/review-pending">Review Pending Events</a></p>
         <p><a href="/add-event">Add Another Event</a></p>
+        <p><a href="/dashboard">Back to Dashboard</a></p>
     </body>
     </html>
     """
@@ -1019,9 +1047,12 @@ def submit_event():
 
     title = (data.get("title") or "").strip()
     start_dt = (data.get("start_dt") or "").strip()
+    end_dt = (data.get("end_dt") or "").strip()
     location = (data.get("location") or "").strip()
     url = (data.get("url") or "").strip()
     source = (data.get("source") or "Pending Submission").strip()
+    category = (data.get("category") or "event").strip()
+    description = (data.get("description") or "").strip()
 
     if not title:
         return jsonify({"ok": False, "error": "title is required"}), 400
@@ -1029,9 +1060,12 @@ def submit_event():
     event = {
         "title": title,
         "start_dt": start_dt or None,
+        "end_dt": end_dt or None,
         "location": location,
         "source": source,
         "url": url,
+        "category": category,
+        "description": description,
     }
 
     PENDING_EVENTS.append(event)
