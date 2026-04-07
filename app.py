@@ -83,7 +83,9 @@ def test_add_event():
     }
 
     PENDING_EVENTS.append(event)
+    save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
     _cache["ts"] = 0
+
 
     return {"ok": True, "message": "Test event added"}
 
@@ -730,7 +732,10 @@ def approve_latest():
 
     event = PENDING_EVENTS.pop()
     APPROVED_EVENTS.append(event)
-    refresh_cache_if_needed(force=True)
+    save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
+    save_events_to_file(APPROVED_EVENTS_FILE, APPROVED_EVENTS)
+    _cache["ts"] = 0
+
 
     return {"ok": True, "message": "Latest pending event approved", "event": event}
 
@@ -950,8 +955,10 @@ def submit_event_form():
         "description": description,
     }
 
-    PENDING_EVENTS.append(event)
+    event = PENDING_EVENTS.pop(event_index)
+    APPROVED_EVENTS.append(event)
     save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
+    save_events_to_file(APPROVED_EVENTS_FILE, APPROVED_EVENTS)
     _cache["ts"] = 0
 
     return f"""
@@ -1084,7 +1091,9 @@ def reject_pending(event_index: int):
         return "Pending event not found", 404
 
     PENDING_EVENTS.pop(event_index)
+    save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
     _cache["ts"] = 0
+
 
     return """
     <html>
