@@ -925,7 +925,7 @@ def reject_pending(event_index: int):
         <p><a href="/review-pending">Back to Pending Review</a></p>
     </body>
     </html>
-    ""”
+    """
 
 @app.post("/submit-event")
 def submit_event():
