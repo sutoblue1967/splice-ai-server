@@ -12,6 +12,27 @@ from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 import xml.etree.ElementTree as ET
 
+def load_events_from_file(filename: str) -> List[Dict[str, Any]]:
+    if not os.path.exists(filename):
+        return []
+
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+    except Exception as e:
+        print(f"Failed loading {filename}: {e}")
+
+    return []
+
+
+def save_events_to_file(filename: str, events: List[Dict[str, Any]]) -> None:
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(events, f, indent=2)
+    except Exception as e:
+        print(f"Failed saving {filename}: {e}")
 def load_persistent_events() -> None:
     global PENDING_EVENTS, APPROVED_EVENTS
     PENDING_EVENTS = load_events_from_file(PENDING_EVENTS_FILE)
@@ -69,28 +90,6 @@ def test_add_event():
 
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
-
-def load_events_from_file(filename: str) -> List[Dict[str, Any]]:
-    if not os.path.exists(filename):
-        return []
-
-    try:
-        with open(filename, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if isinstance(data, list):
-                return data
-    except Exception as e:
-        print(f"Failed loading {filename}: {e}")
-
-    return []
-
-
-def save_events_to_file(filename: str, events: List[Dict[str, Any]]) -> None:
-    try:
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(events, f, indent=2)
-    except Exception as e:
-        print(f"Failed saving {filename}: {e}")
 
 
 def fetch_html(url: str) -> str:
