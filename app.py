@@ -452,26 +452,49 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
         return "I’m not seeing any upcoming events from my current sources."
 
     lines = []
+
     for e in events[:limit]:
         title = str(e.get("title", "Event")).strip()
         location = str(e.get("location", "")).strip()
+        description = str(e.get("description", "")).strip()
         start_dt = e.get("start_dt")
+        end_dt = e.get("end_dt")
 
-        nice = "Date coming soon"
+        when = "Date coming soon"
+
         if start_dt:
             try:
                 sd = dtparser.isoparse(start_dt)
                 if sd.tzinfo is None:
                     sd = sd.replace(tzinfo=timezone.utc)
                 sd = sd.astimezone()
-                nice = sd.strftime("%a, %b %d at %I:%M %p").replace(" 0", " ")
+
+                start_text = sd.strftime("%a, %b %d at %I:%M %p").replace(" 0", " ")
+
+                if end_dt:
+                    try:
+                        ed = dtparser.isoparse(end_dt)
+                        if ed.tzinfo is None:
+                            ed = ed.replace(tzinfo=timezone.utc)
+                        ed = ed.astimezone()
+                        end_text = ed.strftime("%I:%M %p").lstrip("0")
+                        when = f"{start_text} - {end_text}"
+                    except Exception:
+                        when = start_text
+                else:
+                    when = start_text
             except Exception:
-                nice = "Date coming soon"
+                when = "Date coming soon"
+
+        parts = [title, when]
+
+        if description:
+            parts.append(description)
 
         if location:
-            lines.append(f"{title}\n{nice}\n{location}")
-        else:
-            lines.append(f"{title}\n{nice}")
+            parts.append(location)
+
+        lines.append("\n".join(parts))
 
     return "\n\n".join(lines)
 
