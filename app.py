@@ -12,6 +12,11 @@ from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 import xml.etree.ElementTree as ET
 
+def load_persistent_events() -> None:
+    global PENDING_EVENTS, APPROVED_EVENTS
+    PENDING_EVENTS = load_events_from_file(PENDING_EVENTS_FILE)
+    APPROVED_EVENTS = load_events_from_file(APPROVED_EVENTS_FILE)
+
 app = Flask(__name__)
 CORS(app)
 load_persistent_events()
@@ -86,12 +91,6 @@ def save_events_to_file(filename: str, events: List[Dict[str, Any]]) -> None:
             json.dump(events, f, indent=2)
     except Exception as e:
         print(f"Failed saving {filename}: {e}")
-
-
-def load_persistent_events() -> None:
-    global PENDING_EVENTS, APPROVED_EVENTS
-    PENDING_EVENTS = load_events_from_file(PENDING_EVENTS_FILE)
-    APPROVED_EVENTS = load_events_from_file(APPROVED_EVENTS_FILE)
 
 
 def fetch_html(url: str) -> str:
