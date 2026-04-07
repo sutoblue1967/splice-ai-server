@@ -681,6 +681,92 @@ def approve_latest():
 
     return {"ok": True, "message": "Latest pending event approved", "event": event}
 
+@app.get("/dashboard")
+def dashboard():
+    html = """
+    <!doctype html>
+    <html>
+    <head>
+        <title>Splice AI Dashboard</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 800px;
+                margin: 40px auto;
+                padding: 20px;
+                background: #f8f8f8;
+            }
+            h1 {
+                margin-bottom: 10px;
+            }
+            p {
+                color: #555;
+                margin-bottom: 30px;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 16px;
+            }
+            a.card {
+                display: block;
+                background: white;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+                text-decoration: none;
+                color: #222;
+            }
+            a.card:hover {
+                background: #fff7f7;
+            }
+            .title {
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 8px;
+            }
+            .desc {
+                color: #666;
+                font-size: 14px;
+                line-height: 1.4;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Splice AI Dashboard</h1>
+        <p>Your internal control panel for feeding and reviewing events.</p>
+
+        <div class="grid">
+            <a class="card" href="/add-event">
+                <div class="title">Add Event</div>
+                <div class="desc">Manually enter a new event and send it to pending review.</div>
+            </a>
+
+            <a class="card" href="/review-pending">
+                <div class="title">Review Pending</div>
+                <div class="desc">Approve or reject events waiting to go live.</div>
+            </a>
+
+            <a class="card" href="/pending-events">
+                <div class="title">Pending JSON</div>
+                <div class="desc">Raw view of pending events for debugging.</div>
+            </a>
+
+            <a class="card" href="/events">
+                <div class="title">Live Events</div>
+                <div class="desc">See what is currently live in the feed.</div>
+            </a>
+
+            <a class="card" href="/health">
+                <div class="title">Health Check</div>
+                <div class="desc">Quick status check for the backend service.</div>
+            </a>
+        </div>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
+
 @app.get("/add-event")
 def add_event_form():
     html = """
