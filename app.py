@@ -797,7 +797,136 @@ def submit_event_form():
     </body>
     </html>
     """
-    
+
+@app.get("/review-pending")
+def review_pending():
+    html = """
+    <!doctype html>
+    <html>
+    <head>
+        <title>Review Pending Events</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 900px;
+                margin: 40px auto;
+                padding: 20px;
+                background: #f8f8f8;
+            }
+            h1 {
+                margin-bottom: 20px;
+            }
+            .card {
+                background: white;
+                padding: 18px;
+                margin-bottom: 16px;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            }
+            .title {
+                font-size: 20px;
+                font-weight: bold;
+                margin-bottom: 10px;
+            }
+            .meta {
+                margin-bottom: 6px;
+                color: #444;
+            }
+            .buttons {
+                margin-top: 15px;
+                display: flex;
+                gap: 10px;
+            }
+            button {
+                padding: 10px 16px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 15px;
+            }
+            .approve {
+                background: #2e8b57;
+                color: white;
+            }
+            .reject {
+                background: #c94c4c;
+                color: white;
+            }
+            .empty {
+                background: white;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Pending Events Review</h1>
+        {% if events %}
+            {% for event in events %}
+                <div class="card">
+                    <div class="title">{{ event.title }}</div>
+                    <div class="meta"><strong>Start:</strong> {{ event.start_dt or "None" }}</div>
+                    <div class="meta"><strong>Location:</strong> {{ event.location or "None" }}</div>
+                    <div class="meta"><strong>Source:</strong> {{ event.source or "None" }}</div>
+                    <div class="meta"><strong>URL:</strong> {{ event.url or "None" }}</div>
+
+                    <div class="buttons">
+                        <form method="post" action="/approve-pending/{{ loop.index0 }}">
+                            <button class="approve" type="submit">Approve</button>
+                        </form>
+
+                        <form method="post" action="/reject-pending/{{ loop.index0 }}">
+                            <button class="reject" type="submit">Reject</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty">No pending events right now.</div>
+        {% endif %}
+    </body>
+    </html>
+    """
+    return render_template_string(html, events=PENDING_EVENTS)
+
+
+@app.post("/approve-pending/<int:event_index>")
+def approve_pending(event_index: int):
+    if event_index < 0 or event_index >= len(PENDING_EVENTS):
+        return "Pending event not found", 404
+
+    event = PENDING_EVENTS.pop(event_index)
+    APPROVED_EVENTS.append(event)
+    _cache["ts"] = 0
+
+    return """
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px;">
+        <h2>Event approved</h2>
+        <p><a href="/review-pending">Back to Pending Review</a></p>
+        <p><a href="/events">View Live Events</a></p>
+    </body>
+    </html>
+    """
+
+@app.post("/reject-pending/<int:event_index>")
+def reject_pending(event_index: int):
+    if event_index < 0 or event_index >= len(PENDING_EVENTS):
+        return "Pending event not found", 404
+
+    PENDING_EVENTS.pop(event_index)
+    _cache["ts"] = 0
+
+    return """
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px;">
+        <h2>Event rejected</h2>
+        <p><a href="/review-pending">Back to Pending Review</a></p>
+    </body>
+    </html>
+    ""”
+
 @app.post("/submit-event")
 def submit_event():
     data = request.get_json(force=True)
