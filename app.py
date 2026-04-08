@@ -955,10 +955,8 @@ def submit_event_form():
         "description": description,
     }
 
-    event = PENDING_EVENTS.pop(event_index)
-    APPROVED_EVENTS.append(event)
+    PENDING_EVENTS.append(event)
     save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
-    save_events_to_file(APPROVED_EVENTS_FILE, APPROVED_EVENTS)
     _cache["ts"] = 0
 
     return f"""
