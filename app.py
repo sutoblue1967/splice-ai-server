@@ -713,6 +713,10 @@ def handle_chat():
     intent = classify_query(msg)
     events = _cache.get("events", [])
     scoped = filter_by_intent(events, intent)
+    
+    if intent == "right_now":
+        scoped = right_now_events
+
 
     if msg.lower() in ["hi", "hello", "hey"]:
         return jsonify({
