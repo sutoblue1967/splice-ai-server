@@ -454,18 +454,39 @@ def refresh_cache_if_needed(force: bool = False) -> None:
 
     for e in all_events:
         start_dt = e.get("start_dt")
-        if not start_dt:
+        end_dt = e.get("end_dt")
+
+        if not start_dt and not end_dt:
             filtered.append(e)
             continue
 
         try:
-            sd = dtparser.isoparse(start_dt)
-            if sd.tzinfo is None:
+            sd = dtparser.isoparse(start_dt) if start_dt else None
+            ed = dtparser.isoparse(end_dt) if end_dt else None
+
+            if sd and sd.tzinfo is None:
                 sd = sd.replace(tzinfo=timezone.utc)
-            if sd >= n:
+            if ed and ed.tzinfo is None:
+                ed = ed.replace(tzinfo=timezone.utc)
+
+            # Keep future events
+            if sd and sd >= n:
                 filtered.append(e)
+                continue
+
+            # Keep events happening right now
+            if sd and ed and sd <= n <= ed:
+                filtered.append(e)
+                continue
+
+            # Keep items that only have an end time and haven't ended yet
+            if not sd and ed and ed >= n:
+                filtered.append(e)
+                continue
+
         except Exception:
             filtered.append(e)
+
 
     def sort_key(e: Dict[str, Any]):
         start_dt = e.get("start_dt")
