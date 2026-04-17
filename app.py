@@ -650,6 +650,32 @@ def events():
         mimetype="application/json",
     )
 
+def get_right_now_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    now = now_utc()
+    active = []
+
+    for e in events:
+        start_dt = e.get("start_dt")
+        end_dt = e.get("end_dt")
+
+        if not start_dt or not end_dt:
+            continue
+
+        try:
+            sd = dtparser.isoparse(start_dt)
+            ed = dtparser.isoparse(end_dt)
+
+            if sd.tzinfo is None:
+                sd = sd.replace(tzinfo=timezone.utc)
+            if ed.tzinfo is None:
+                ed = ed.replace(tzinfo=timezone.utc)
+
+            if sd <= now <= ed:
+                active.append(e)
+        except Exception:
+            continue
+
+    return active
 
 def handle_chat():
     data = request.get_json(silent=True) or {}
@@ -660,6 +686,7 @@ def handle_chat():
 
     refresh_cache_if_needed(force=True)
     events = _cache.get("events", [])
+    right_now_events = get_right_now_events(events)
 
 
     intent = classify_query(msg)
