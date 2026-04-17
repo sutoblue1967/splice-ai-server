@@ -1149,6 +1149,13 @@ def reject_pending(event_index: int):
     </body>
     </html>
     """
+@app.get("/approved-events")
+def approved_events():
+    return app.response_class(
+        response=json.dumps(APPROVED_EVENTS, indent=2),
+        status=200,
+        mimetype="application/json",
+    )
 
 @app.post("/submit-event")
 def submit_event():
