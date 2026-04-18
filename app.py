@@ -609,15 +609,14 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
     if intent == "weekend":
         out = []
         local_now = now.astimezone()
-        today = local_now.date()
-        weekday = local_now.weekday()  # Monday=0, Sunday=6
+        weekday = local_now.weekday()  # Monday=0 ... Sunday=6
 
         if weekday in [4, 5, 6]:
-            # Already in the weekend: use this Friday-Sunday
-            friday = today - timedelta(days=(weekday - 4))
+            # Friday, Saturday, Sunday -> use THIS weekend
+            friday = (local_now - timedelta(days=weekday - 4)).date()
         else:
-            # Before the weekend: use the upcoming Friday
-            friday = today + timedelta(days=(4 - weekday))
+            # Monday-Thursday -> use UPCOMING weekend
+            friday = (local_now + timedelta(days=4 - weekday)).date()
 
         sunday = friday + timedelta(days=2)
 
@@ -625,15 +624,19 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
             start_dt = e.get("start_dt")
             if not start_dt:
                 continue
+
             try:
                 sd = dtparser.isoparse(start_dt)
                 if sd.tzinfo is None:
                     sd = sd.replace(tzinfo=timezone.utc)
+
                 sd = sd.astimezone()
+
                 if friday <= sd.date() <= sunday:
                     out.append(e)
             except Exception:
                 continue
+
         return out
 
     keywords = {
