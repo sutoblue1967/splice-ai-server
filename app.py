@@ -671,13 +671,11 @@ def health():
 @app.get("/db-test")
 def db_test():
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT 1;")
-        result = cur.fetchone()
-        cur.close()
-        conn.close()
-        return {"ok": True, "result": result}
+        return {
+            "ok": True,
+            "database_url_exists": bool(DATABASE_URL),
+            "database_url_starts_with": DATABASE_URL[:20] if DATABASE_URL else "EMPTY"
+        }
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
