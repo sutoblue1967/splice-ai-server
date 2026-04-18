@@ -11,6 +11,8 @@ from dateutil import parser as dtparser
 from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 import xml.etree.ElementTree as ET
+import os
+import psycopg2
 
 def load_events_from_file(filename: str) -> List[Dict[str, Any]]:
     if not os.path.exists(filename):
