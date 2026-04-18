@@ -668,6 +668,19 @@ def health():
         "build": "stable-reset-v2-approve",
     })
 
+@app.get("/db-test")
+def db_test():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1;")
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        return {"ok": True, "result": result}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
 
 @app.get("/events")
 def events():
