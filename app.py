@@ -609,8 +609,16 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
     if intent == "weekend":
         out = []
         local_now = now.astimezone()
-        days_until_friday = (4 - local_now.weekday()) % 7
-        friday = (local_now + timedelta(days=days_until_friday)).date()
+        today = local_now.date()
+        weekday = local_now.weekday()  # Monday=0, Sunday=6
+
+        if weekday in [4, 5, 6]:
+            # Already in the weekend: use this Friday-Sunday
+            friday = today - timedelta(days=(weekday - 4))
+        else:
+            # Before the weekend: use the upcoming Friday
+            friday = today + timedelta(days=(4 - weekday))
+
         sunday = friday + timedelta(days=2)
 
         for e in events:
