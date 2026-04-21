@@ -1040,13 +1040,12 @@ def submit_event_form():
     save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
     _cache["ts"] = 0
 
-   return f"""
+    return f"""
 <h2>Event approved</h2>
 <p><a href="/review-pending">Back to Pending Review</a></p>
 <p><a href="/events">View Live Events</a></p>
 <p><a href="/submit-event-form">Back to Main Dashboard</a></p>
 """
-
 
 @app.get("/review-pending")
 def review_pending():
