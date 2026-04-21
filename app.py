@@ -1045,7 +1045,7 @@ def submit_event_form():
 <p><a href="/review-pending">Back to Pending Review</a></p>
 <p><a href="/events">View Live Events</a></p>
 <p><a href="/submit-event-form">Back to Main Dashboard</a></p>
-""”
+"""
 
 
 @app.get("/review-pending")
