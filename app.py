@@ -847,13 +847,19 @@ def bulk_ingest_post():
     current_venue = ""
     events = []
 
-    event_pattern = re.compile(
-        r"^(\d{1,2}/\d{1,2})\s*-\s*(.+?)\s+(\d{1,2}(?::\d{2})?(?:am|pm)?\s*[–-]\s*\d{1,2}(?::\d{2})?(?:am|pm)?)$",
-        re.IGNORECASE
+    event_pattern_numeric = re.compile(
+    r"^(\d{1,2}/\d{1,2})\s*-\s*(.+?)\s+(\d{1,2}(?::\d{2})?(?:am|pm)?\s*[–-]\s*\d{1,2}(?::\d{2})?(?:am|pm)?)$",
+    re.IGNORECASE
     )
 
+    event_pattern_long = re.compile(
+    r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4},\s+\d{1,2}:\d{2}\s*(?:am|pm)[–-]\d{1,2}:\d{2}\s*(?:am|pm)$",
+    re.IGNORECASE
+    )
+
+
     for line in lines:
-        match = event_pattern.match(line)
+        match = event_pattern_numeric.match(line)
 
         if match:
             date_part = match.group(1).strip()
@@ -867,8 +873,19 @@ def bulk_ingest_post():
                 "time": time_part,
                 "raw": line
             })
+
+        elif event_pattern_long.match(line):
+            events.append({
+                "venue": current_venue,
+                "date": line,
+                "title": current_venue,
+                "time": "",
+                "raw": line
+            })
+
         else:
             current_venue = line
+
 
     hidden_inputs = ""
     for e in events:
