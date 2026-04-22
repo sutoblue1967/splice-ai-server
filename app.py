@@ -26,7 +26,7 @@ def load_events_from_file(filename: str) -> List[Dict[str, Any]]:
     try:
         with open(filename, "r", encoding="utf-8") as f:
             data = json.load(f)
-            if isinstance(data, list):
+            if isinstance(data, list): 
                 return data
     except Exception as e:
         print(f"Failed loading {filename}: {e}")
