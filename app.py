@@ -812,7 +812,10 @@ def bulk_ingest_post():
     current_venue = ""
     events = []
 
-    event_pattern = re.compile(r"^(\d{1,2}/\d{1,2})\s*-\s*(.+?)\s+(\d{1,2}(?::\d{2})?(?:am|pm)?\s*[–-]\s*\d{1,2}(?::\d{2})?(?:am|pm)?)$", re.IGNORECASE)
+    event_pattern = re.compile(
+        r"^(\d{1,2}/\d{1,2})\s*-\s*(.+?)\s+(\d{1,2}(?::\d{2})?(?:am|pm)?\s*[–-]\s*\d{1,2}(?::\d{2})?(?:am|pm)?)$",
+        re.IGNORECASE
+    )
 
     for line in lines:
         match = event_pattern.match(line)
@@ -832,11 +835,18 @@ def bulk_ingest_post():
         else:
             current_venue = line
 
+    hidden_inputs = ""
+    for e in events:
+        hidden_inputs += f'''
+        <input type="hidden" name="venue" value="{e["venue"]}">
+        <input type="hidden" name="date" value="{e["date"]}">
+        <input type="hidden" name="title" value="{e["title"]}">
+        <input type="hidden" name="time" value="{e["time"]}">
+        '''
 
     return f"""
     <html>
-    <body style="font-family: Arial; max-width: 900px; margin: 40px auto;">
-
+    <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
         <h2>Bulk Ingest Preview</h2>
 
         <h3>Detected Events</h3>
@@ -847,15 +857,58 @@ def bulk_ingest_post():
             ])}
         </ul>
 
+        <form method="post" action="/bulk-ingest-save">
+            {hidden_inputs}
+            <button type="submit" style="padding: 12px 18px; font-size: 16px;">Send All to Pending</button>
+        </form>
+
         <br><br>
         <a href="/bulk-ingest">Back to Bulk Ingest</a><br>
         <a href="/dashboard">Back to Dashboard</a>
-
     </body>
     </html>
     """
 
+@app.post("/bulk-ingest-save")
+def bulk_ingest_save():
+    venues = request.form.getlist("venue")
+    dates = request.form.getlist("date")
+    titles = request.form.getlist("title")
+    times = request.form.getlist("time")
 
+    count = 0
+
+    for venue, date_part, title, time_part in zip(venues, dates, titles, times):
+        event = {
+            "title": title,
+            "start_dt": date_part,
+            "end_dt": None,
+            "location": venue,
+            "source": "Bulk Ingest",
+            "url": "",
+            "category": "event",
+            "description": f"{title} at {venue} from {time_part}"
+        }
+
+        PENDING_EVENTS.append(event)
+        count += 1
+
+    save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
+    _cache["ts"] = 0
+
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
+        <h2>Bulk Ingest Complete</h2>
+        <p><strong>{count}</strong> events were sent to pending.</p>
+
+        <p><a href="/review-pending">Review Pending Events</a></p>
+        <p><a href="/bulk-ingest">Back to Bulk Ingest</a></p>
+        <p><a href="/dashboard">Back to Dashboard</a></p>
+    </body>
+    </html>
+    """
+    
 @app.get("/pending-events")
 def pending_events():
     return app.response_class(
