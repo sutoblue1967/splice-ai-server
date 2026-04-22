@@ -882,13 +882,13 @@ def bulk_ingest_post():
             date_part = ", ".join(parts[:2]).strip()   # April 24, 2026
             time_part = parts[2].strip() if len(parts) > 2 else ""
 
-        events.append({
-            "venue": current_venue,
-            "date": date_part,
-            "title": title,
-            "time": time_part,
-            "raw": line
-        })
+            events.append({
+                "venue": current_venue,
+                "date": date_part,
+                "title": title,
+                "time": time_part,
+                "raw": line
+            })
 
         else:
             current_venue = line
