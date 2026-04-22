@@ -891,13 +891,11 @@ def bulk_ingest_post():
             })
 
        else:
-        # Detect address (very basic)
-        if any(word in line.lower() for word in ["street", "st", "avenue", "ave", "road", "rd", "parkersburg"]):
+    # Detect address (very basic)
+    if any(word in line.lower() for word in ["street", "st", "avenue", "ave", "road", "rd", "parkersburg"]):
         venue = line
-        else:
-            current_venue = line
-
-
+    else:
+        current_venue = line
 
     hidden_inputs = ""
     for e in events:
