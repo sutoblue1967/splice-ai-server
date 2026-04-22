@@ -1041,12 +1041,17 @@ def submit_event_form():
     _cache["ts"] = 0
 
     return f"""
-<h2>Event approved</h2>
-<p><a href="/pending-review">Back to Pending Review</a></p>
-<p><a href="/events">View Live Events</a></p>
-<p><a href="/submit-event-form">Submit Another Event</a></p>
-"""
-    
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px;">
+        <h2>Event submitted to pending</h2>
+        <p><strong>{title}</strong></p>
+        <p><a href="/review-pending">Review Pending Events</a></p>
+        <p><a href="/add-event">Add Another Event</a></p>
+        <p><a href="/dashboard">Back to Dashboard</a></p>
+    </body>
+    </html>
+    """
+
 @app.get("/review-pending")
 def review_pending():
     html = """
