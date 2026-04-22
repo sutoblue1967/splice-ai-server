@@ -812,16 +812,26 @@ def bulk_ingest_post():
     current_venue = ""
     events = []
 
-    date_pattern = re.compile(r"\b\d{1,2}/\d{1,2}\b")
+    event_pattern = re.compile(r"^(\d{1,2}/\d{1,2})\s*-\s*(.+?)\s+(\d{1,2}(?::\d{2})?(?:am|pm)?\s*[–-]\s*\d{1,2}(?::\d{2})?(?:am|pm)?)$", re.IGNORECASE)
 
     for line in lines:
-        if date_pattern.search(line):
+        match = event_pattern.match(line)
+
+        if match:
+            date_part = match.group(1).strip()
+            title_part = match.group(2).strip()
+            time_part = match.group(3).strip()
+
             events.append({
                 "venue": current_venue,
+                "date": date_part,
+                "title": title_part,
+                "time": time_part,
                 "raw": line
             })
         else:
             current_venue = line
+
 
     return f"""
     <html>
@@ -831,7 +841,10 @@ def bulk_ingest_post():
 
         <h3>Detected Events</h3>
         <ul>
-            {''.join([f"<li><strong>{e['venue']}</strong> → {e['raw']}</li>" for e in events])}
+            {''.join([
+                f"<li><strong>{e['title']}</strong><br>Date: {e['date']}<br>Time: {e['time']}<br>Venue: {e['venue']}</li><br>"
+                for e in events
+            ])}
         </ul>
 
         <br><br>
