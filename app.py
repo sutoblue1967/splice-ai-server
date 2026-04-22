@@ -730,6 +730,37 @@ def get_right_now_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def handle_chat():
     data = request.get_json(silent=True) or {}
     msg = (data.get("message") or "").strip()
+    msg_lower = msg.lower()
+
+    blocked_words = [
+        "fuck", "shit", "bitch", "asshole", "dick", "pussy", "slut",
+        "whore", "faggot", "nigger", "cunt"
+    ]
+
+    event_keywords = [
+        "event", "events", "happening", "happening tonight", "tonight",
+        "today", "this weekend", "weekend", "live music", "music",
+        "concert", "show", "festival", "art", "family", "kids",
+        "food", "drink", "drinks", "special", "specials", "restaurant",
+        "bar", "patio", "things to do", "date night", "downtown",
+        "adelphia", "house of wines", "parkersburg", "marietta", "mov"
+    ]
+
+    if any(word in msg_lower for word in blocked_words):
+        return jsonify({
+            "message": "I’m here to help with local events, food, and things to do around the MOV."
+        })
+
+    if len(msg) > 400:
+        return jsonify({
+            "message": "Try a shorter question about local events, food, or things to do around the MOV."
+        })
+
+    if not any(keyword in msg_lower for keyword in event_keywords):
+        return jsonify({
+            "message": "I’m focused on local events, food specials, and things to do around the MOV. Try asking what’s happening tonight, this weekend, or where to go."
+        })
+
 
     if not msg:
         return jsonify({"message": "Message is required"}), 400
