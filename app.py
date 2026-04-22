@@ -812,7 +812,7 @@ def handle_chat():
         outro = "\n\nWant me to narrow it to right now, tonight, food, or music?"
     else:
         intro = "Here are a few good options I found."
-        outro = "\n\nWant me to narrow it down by food, music, family, art, or what’s happening right now?”
+        outro = "\n\nWant me to narrow it down by food, music, family, art, or what’s happening right now?"
 
     reply = f"{intro}\n\n{reply_body}{outro}"
     return jsonify({"message": reply}), 200
