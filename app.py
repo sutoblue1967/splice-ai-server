@@ -844,51 +844,42 @@ def bulk_ingest_post():
 
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
 
+    current_title = ""
     current_venue = ""
     events = []
 
     event_pattern_numeric = re.compile(
-    r"^(\d{1,2}/\d{1,2})\s*-\s*(.+?)\s+(\d{1,2}(?::\d{2})?(?:am|pm)?\s*[–-]\s*\d{1,2}(?::\d{2})?(?:am|pm)?)$",
-    re.IGNORECASE
+        r"^(\d{1,2}/\d{1,2})\s*-\s*(.+?)\s+(\d{1,2}(?::\d{2})?(?:am|pm)?\s*[–-]\s*\d{1,2}(?::\d{2})?(?:am|pm)?)$",
+        re.IGNORECASE
     )
 
     event_pattern_long = re.compile(
-    r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4},\s+\d{1,2}:\d{2}\s*(?:am|pm)[–-]\d{1,2}:\d{2}\s*(?:am|pm)$",
-    re.IGNORECASE
+        r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4},",
+        re.IGNORECASE
     )
 
-
     for line in lines:
-        match = event_pattern_numeric.match(line)
 
+        # --- NUMERIC FORMAT (4/22 - Band 5–7pm) ---
+        match = event_pattern_numeric.match(line)
         if match:
             date_part = match.group(1).strip()
             title_part = match.group(2).strip()
             time_part = match.group(3).strip()
 
             events.append({
-                "venue": current_venue,
-                "date": date_part,
                 "title": title_part,
-                "time": time_part,
-                "raw": line
-            })
-
-        elif event_pattern_long.match(line):
-            title = current_venue if current_venue else "Event"
-
-            # split date and time
-            parts = line.split(",")
-            date_part = ", ".join(parts[:2]).strip()   # April 24, 2026
-            time_part = parts[2].strip() if len(parts) > 2 else ""
-
-            events.append({
-                "venue": current_venue,
                 "date": date_part,
-                "title": title,
                 "time": time_part,
+                "venue": current_venue or current_title,
                 "raw": line
             })
+            continue
+
+        # --- LONG FORMAT (April 24, 2026, 9:00 am–4:00 pm) ---
+        if event_pattern_long.match(line):
+            parts = line.split(",")
+
 
     else:
     # Detect address (very basic)
