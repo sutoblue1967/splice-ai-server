@@ -782,54 +782,47 @@ def handle_chat():
     reply = f"{intro}\n\n{reply_body}{outro}"
     return jsonify({"message": reply}), 200
 
-@app.get("/bulk-ingest")
-def bulk_ingest():
-    html = """
-    <html>
-    <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
-        <h2>Bulk Ingest</h2>
-        <p>Paste raw event text below.</p>
-        <form method="post" action="/bulk-ingest">
-            <textarea name="raw_text" rows="18" style="width: 100%; padding: 12px; font-size: 16px;"></textarea>
-            <br><br>
-            <button type="submit" style="padding: 12px 18px; font-size: 16px;">Preview Raw Text</button>
-        </form>
-        <br>
-        <p><a href="/dashboard">Back to Dashboard</a></p>
-    </body>
-    </html>
-    """
-    return render_template_string(html)
-
 @app.post("/bulk-ingest")
 def bulk_ingest_post():
     raw_text = (request.form.get("raw_text") or "").strip()
 
+    import re
+
     lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
 
-    line_items = ""
+    current_venue = ""
+    events = []
+
+    date_pattern = re.compile(r"\b\d{1,2}/\d{1,2}\b")
+
     for line in lines:
-        line_items += f"<li>{line}</li>"
+        if date_pattern.search(line):
+            events.append({
+                "venue": current_venue,
+                "raw": line
+            })
+        else:
+            current_venue = line
 
     return f"""
     <html>
-    <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
+    <body style="font-family: Arial; max-width: 900px; margin: 40px auto;">
+
         <h2>Bulk Ingest Preview</h2>
 
-        <p><strong>Raw text submitted:</strong></p>
-        <pre style="white-space: pre-wrap; background: #f4f4f4; padding: 16px; border-radius: 8px;">{raw_text}</pre>
-
-        <h3>Detected Lines</h3>
+        <h3>Detected Events</h3>
         <ul>
-            {line_items}
+            {''.join([f"<li><strong>{e['venue']}</strong> → {e['raw']}</li>" for e in events])}
         </ul>
 
-        <br>
-        <p><a href="/bulk-ingest">Back to Bulk Ingest</a></p>
-        <p><a href="/dashboard">Back to Dashboard</a></p>
+        <br><br>
+        <a href="/bulk-ingest">Back to Bulk Ingest</a><br>
+        <a href="/dashboard">Back to Dashboard</a>
+
     </body>
     </html>
     """
+
 
 @app.get("/pending-events")
 def pending_events():
