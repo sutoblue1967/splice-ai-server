@@ -805,12 +805,25 @@ def bulk_ingest():
 def bulk_ingest_post():
     raw_text = (request.form.get("raw_text") or "").strip()
 
+    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+    line_items = ""
+    for line in lines:
+        line_items += f"<li>{line}</li>"
+
     return f"""
     <html>
     <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
         <h2>Bulk Ingest Preview</h2>
-        <p>This is the raw text you submitted:</p>
+
+        <p><strong>Raw text submitted:</strong></p>
         <pre style="white-space: pre-wrap; background: #f4f4f4; padding: 16px; border-radius: 8px;">{raw_text}</pre>
+
+        <h3>Detected Lines</h3>
+        <ul>
+            {line_items}
+        </ul>
+
         <br>
         <p><a href="/bulk-ingest">Back to Bulk Ingest</a></p>
         <p><a href="/dashboard">Back to Dashboard</a></p>
