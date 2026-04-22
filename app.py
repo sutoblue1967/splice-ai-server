@@ -789,27 +789,30 @@ def handle_chat():
 
     reply_body = format_events(scoped, limit=6)
 
-    if intent == "weekend":
-        intro = "Here are some great events I found for this weekend:"
-        outro = "\n\nWant me to narrow that down to music, family-friendly, art, or classes?"
+    if intent == "right_now":
+        intro = "There are a few good options happening right now."
+        outro = "\n\nWant food, live music, or just the strongest option?"
+    elif intent == "weekend":
+        intro = "Here are a few solid things happening this weekend."
+        outro = "\n\nWant me to narrow it to music, family-friendly, or something more laid-back?"
     elif intent == "music":
-        intro = "Here are some music events I found:"
-        outro = "\n\nWant more like this, or want me to look for something family-friendly or artsy?"
+        intro = "A couple good music options are standing out."
+        outro = "\n\nWant something more chill, bigger energy, or earlier in the night?"
     elif intent == "art":
-        intro = "Here are some art-related events I found:"
-        outro = "\n\nWant me to keep going with art, or switch to music, family, or weekend events?"
+        intro = "Here are a few art-related things worth checking out."
+        outro = "\n\nWant gallery-type stuff, classes, or something more social?"
     elif intent == "family":
-        intro = "Here are some family-friendly events I found:"
-        outro = "\n\nWant more family options, or want me to look for music or art?"
+        intro = "Here are some family-friendly options that look good."
+        outro = "\n\nWant indoor, outdoor, or something easy and low-effort?"
     elif intent == "classes":
-        intro = "Here are some classes and workshops I found:"
-        outro = "\n\nWant me to keep looking for classes, or switch to music, art, or family events?"
+        intro = "Here are some classes and workshops coming up."
+        outro = "\n\nWant creative, kid-friendly, or more adult-focused options?"
     elif intent == "today":
-        intro = "Here’s what’s happening today:"
-        outro = "\n\nWant me to look for this weekend, or by category?"
+        intro = "Here’s what’s looking good today."
+        outro = "\n\nWant me to narrow it to right now, tonight, food, or music?"
     else:
-        intro = "Here are some great events I found:"
-        outro = "\n\nWant me to narrow it down by music, family-friendly, art, classes, or today?"
+        intro = "Here are a few good options I found."
+        outro = "\n\nWant me to narrow it down by food, music, family, art, or what’s happening right now?”
 
     reply = f"{intro}\n\n{reply_body}{outro}"
     return jsonify({"message": reply}), 200
