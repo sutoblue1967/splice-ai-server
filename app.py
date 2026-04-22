@@ -1042,9 +1042,9 @@ def submit_event_form():
 
     return f"""
 <h2>Event approved</h2>
-<p><a href="/review-pending">Back to Pending Review</a></p>
+<p><a href="/pending-review">Back to Pending Review</a></p>
 <p><a href="/events">View Live Events</a></p>
-<p><a href="/dashboard">Back to Main Dashboard</a></p>
+<p><a href="/submit-event-form">Submit Another Event</a></p>
 """
 
 @app.get("/review-pending")
