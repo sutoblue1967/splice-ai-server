@@ -890,7 +890,7 @@ def bulk_ingest_post():
                 "raw": line
             })
 
-       else:
+    else:
     # Detect address (very basic)
     if any(word in line.lower() for word in ["street", "st", "avenue", "ave", "road", "rd", "parkersburg"]):
         venue = line
