@@ -782,6 +782,42 @@ def handle_chat():
     reply = f"{intro}\n\n{reply_body}{outro}"
     return jsonify({"message": reply}), 200
 
+@app.get("/bulk-ingest")
+def bulk_ingest():
+    html = """
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
+        <h2>Bulk Ingest</h2>
+        <p>Paste raw event text below.</p>
+        <form method="post" action="/bulk-ingest">
+            <textarea name="raw_text" rows="18" style="width: 100%; padding: 12px; font-size: 16px;"></textarea>
+            <br><br>
+            <button type="submit" style="padding: 12px 18px; font-size: 16px;">Preview Raw Text</button>
+        </form>
+        <br>
+        <p><a href="/dashboard">Back to Dashboard</a></p>
+    </body>
+    </html>
+    """
+    return render_template_string(html)
+
+@app.post("/bulk-ingest")
+def bulk_ingest_post():
+    raw_text = (request.form.get("raw_text") or "").strip()
+
+    return f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
+        <h2>Bulk Ingest Preview</h2>
+        <p>This is the raw text you submitted:</p>
+        <pre style="white-space: pre-wrap; background: #f4f4f4; padding: 16px; border-radius: 8px;">{raw_text}</pre>
+        <br>
+        <p><a href="/bulk-ingest">Back to Bulk Ingest</a></p>
+        <p><a href="/dashboard">Back to Dashboard</a></p>
+    </body>
+    </html>
+    """
+
 @app.get("/pending-events")
 def pending_events():
     return app.response_class(
@@ -895,6 +931,12 @@ def dashboard():
                 <div class="title">Live Events</div>
                 <div class="desc">See what is currently live in the feed.</div>
             </a>
+
+            <a class="card" href="/bulk-ingest">
+                <div class="title">Bulk Ingest</div>
+                <div class="desc">Paste raw text and prep events quickly.</div>
+            </a>
+
 
             <a class="card" href="/health">
                 <div class="title">Health Check</div>
