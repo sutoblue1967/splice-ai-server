@@ -743,7 +743,8 @@ def handle_chat():
         "concert", "show", "festival", "art", "family", "kids",
         "food", "drink", "drinks", "special", "specials", "restaurant",
         "bar", "patio", "things to do", "date night", "downtown",
-        "adelphia", "house of wines", "parkersburg", "marietta", "mov"
+        "adelphia", "house of wines", "parkersburg", "marietta", "mov", "right now", "now", "going on now", "what's happening right now"
+
     ]
 
     if any(word in msg_lower for word in blocked_words):
