@@ -875,13 +875,20 @@ def bulk_ingest_post():
             })
 
         elif event_pattern_long.match(line):
-            events.append({
-                "venue": current_venue,
-                "date": line,
-                "title": current_venue,
-                "time": "",
-                "raw": line
-            })
+            title = current_venue if current_venue else "Event"
+
+            # split date and time
+            parts = line.split(",")
+            date_part = ", ".join(parts[:2]).strip()   # April 24, 2026
+            time_part = parts[2].strip() if len(parts) > 2 else ""
+
+        events.append({
+            "venue": current_venue,
+            "date": date_part,
+            "title": title,
+            "time": time_part,
+            "raw": line
+        })
 
         else:
             current_venue = line
