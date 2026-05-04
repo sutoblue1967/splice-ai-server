@@ -855,7 +855,14 @@ def handle_chat():
         outro = "\n\nWant me to narrow it down by food, music, family, art, or what’s happening right now?"
 
     reply = f"{intro}\n\n{reply_body}{outro}"
+
+    ai_reply = generate_ai_response(msg, events)
+
+    if ai_reply:
+    return jsonify({"message": ai_reply}), 200
+
     return jsonify({"message": reply}), 200
+
     
 @app.get("/bulk-ingest")
 def bulk_ingest():
