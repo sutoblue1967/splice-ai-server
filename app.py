@@ -856,16 +856,14 @@ def handle_chat():
 
     reply = f"{intro}\n\n{reply_body}{outro}"
 
-   try:
-        ai_reply = generate_ai_response(msg, events)
+try:
+    ai_reply = generate_ai_response(msg, events)
+    if ai_reply:
+        return jsonify({"message": ai_reply}), 200
+except Exception as e:
+    print("AI wrapper error:", e)
 
-        if ai_reply:
-            return jsonify({"message": ai_reply}), 200
-
-    except Exception as e:
-        print("AI wrapper error:", e)
-
-    return jsonify({"message": reply}), 200
+return jsonify({"message": reply}), 200
 
     
 @app.get("/bulk-ingest")
