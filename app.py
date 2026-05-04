@@ -768,64 +768,64 @@ def get_right_now_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return active
 
 def handle_chat():
-    data = request.get_json(silent=True) or {}
-    msg = (data.get("message") or "").strip()
-    msg_lower = msg.lower()
+    data = request.get_json()
+    msg = data.get("message", "").lower()
 
-    blocked_words = [
-        "fuck", "shit", "bitch", "asshole", "dick", "pussy", "slut",
-        "whore", "faggot", "nigger", "cunt"
-    ]
+    events = get_events()  # however you're currently pulling events
 
-    event_keywords = [
-        "event", "events", "happening", "happening tonight", "tonight",
-        "today", "this weekend", "weekend", "live music", "music",
-        "concert", "show", "festival", "art", "family", "kids",
-        "food", "drink", "drinks", "special", "specials", "restaurant",
-        "bar", "patio", "things to do", "date night", "downtown",
-        "adelphia", "house of wines", "parkersburg", "marietta", "mov", "right now", "now", "going on now", "what's happening right now"
+    # Simple intent detection
+    intent = "general"
+    if "music" in msg:
+        intent = "music"
+    elif "art" in msg:
+        intent = "art"
+    elif "family" in msg:
+        intent = "family"
+    elif "class" in msg:
+        intent = "classes"
+    elif "today" in msg:
+        intent = "today"
 
-    ]
+    # Build basic event list
+    if not events:
+        reply_body = "I’m not seeing any upcoming events from my current sources."
+    else:
+        reply_body = "\n".join([
+            f"{e.get('title', 'Untitled')} — {e.get('location', 'Unknown location')}"
+            for e in events[:5]
+        ])
 
-    if any(word in msg_lower for word in blocked_words):
-        return jsonify({
-            "message": "I’m here to help with local events, food, and things to do around the MOV."
-        })
+    # Tone variations
+    if intent == "music":
+        intro = "Here are some music-related things happening."
+        outro = "\n\nWant live bands, acoustic sets, or something bigger?"
+    elif intent == "art":
+        intro = "Here are a few art-related things worth checking out."
+        outro = "\n\nWant gallery openings, classes, or something more casual?"
+    elif intent == "family":
+        intro = "Here are some family-friendly options that look good."
+        outro = "\n\nWant indoor, outdoor, or something quick and easy?"
+    elif intent == "classes":
+        intro = "Here are some classes and workshops coming up."
+        outro = "\n\nWant creative, kid-friendly, or more advanced options?"
+    elif intent == "today":
+        intro = "Here’s what’s looking good today."
+        outro = "\n\nWant me to narrow it to right now, food, or something nearby?"
+    else:
+        intro = "Here are a few good options I found."
+        outro = "\n\nWant me to narrow it down by music, food, family, or art?"
 
-    if len(msg) > 400:
-        return jsonify({
-            "message": "Try a shorter question about local events, food, or things to do around the MOV."
-        })
+    reply = f"{intro}\n\n{reply_body}{outro}"
 
-    if not any(keyword in msg_lower for keyword in event_keywords):
-        return jsonify({
-            "message": "I’m focused on local events, food specials, and things to do around the MOV. Try asking what’s happening tonight, this weekend, or where to go."
-        })
+    # 🔥 AI LAYER (SAFE WRAPPED)
+    try:
+        ai_reply = generate_ai_response(msg, events)
+        if ai_reply:
+            return jsonify({"message": ai_reply}), 200
+    except Exception as e:
+        print("AI wrapper error:", e)
 
-
-    if not msg:
-        return jsonify({"message": "Message is required"}), 400
-
-    refresh_cache_if_needed(force=True)
-    events = _cache.get("events", [])
-    right_now_events = get_right_now_events(events)
-
-
-    intent = classify_query(msg)
-    events = _cache.get("events", [])
-    scoped = filter_by_intent(events, intent)
-    
-    if intent == "right_now":
-        scoped = right_now_events
-
-
-    if msg.lower() in ["hi", "hello", "hey"]:
-        return jsonify({
-            "message": (
-                f"Hi, I’m {EL_NAME} — your insider for everything happening around the MOV.\n\n"
-                "Try asking for music, art, classes, family events, or a general event question."
-            )
-        }), 200
+    return jsonify({"message": reply}), 200
 
     reply_body = format_events(scoped, limit=6)
 
