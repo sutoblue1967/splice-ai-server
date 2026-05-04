@@ -856,7 +856,7 @@ def handle_chat():
 
     reply = f"{intro}\n\n{reply_body}{outro}"
 
-    ai_reply = generate_ai_response(msg, events)
+    ai_reply = generate_ai_response(msg, ALL_EVENTS)
 
     if ai_reply:
         return jsonify({"message": ai_reply}), 200
