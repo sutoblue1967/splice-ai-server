@@ -15,6 +15,46 @@ import os
 import psycopg2
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
+from openai import OpenAI
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+from openai import OpenAI
+
+client = def generate_ai_response(user_message, events):
+    try:
+        event_text = "\n".join([
+            f"- {e.get('title', 'Untitled')} at {e.get('location', 'Unknown')} on {e.get('start_dt', 'date unknown')}"
+            for e in events[:5]
+        ])
+
+        prompt = f"""
+You are El, a local event insider for the Mid-Ohio Valley.
+
+User asked:
+{user_message}
+
+Real events available:
+{event_text}
+
+Respond in 2–4 short sentences.
+Sound helpful, local, and conversational.
+Do not invent events.
+Only talk about the events provided.
+End with one simple follow-up question.
+"""
+
+        response = client.responses.create(
+            model="gpt-5-mini",
+            input=prompt
+        )
+
+        return response.output_text
+
+    except Exception as e:
+        print("AI error:", e)
+        return None
+
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
