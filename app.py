@@ -862,10 +862,10 @@ def handle_chat():
     if ai_reply:
         return jsonify({"message": ai_reply}), 200
 
-except Exception as e:
-    print("AI wrapper error:", e)
+    except Exception as e:
+        print("AI wrapper error:", e)
 
-return jsonify({"message": reply}), 200
+    return jsonify({"message": reply}), 200
 
     
 @app.get("/bulk-ingest")
