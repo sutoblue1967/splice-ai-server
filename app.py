@@ -19,9 +19,8 @@ from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-from openai import OpenAI
 
-client = def generate_ai_response(user_message, events):
+def generate_ai_response(user_message, events):
     try:
         event_text = "\n".join([
             f"- {e.get('title', 'Untitled')} at {e.get('location', 'Unknown')} on {e.get('start_dt', 'date unknown')}"
@@ -54,6 +53,7 @@ End with one simple follow-up question.
     except Exception as e:
         print("AI error:", e)
         return None
+
 
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
