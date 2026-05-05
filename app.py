@@ -792,17 +792,12 @@ def handle_chat():
     msg = data.get("message", "").lower()
 
     try:
-        events = get_active_events()
+        refresh_cache_if_needed()
+        events = _cache.get("events", [])
+        print("CHAT EVENTS COUNT:", len(events))
     except Exception as e:
-        print("get_active_events error:", e)
+        print("Events load error:", e)
         events = []
-    
-    if not events:
-        try:
-            events = APPROVED_EVENTS
-        except Exception as e:
-            print("APPROVED_EVENTS error:", e)
-            events = []
 
 
 
