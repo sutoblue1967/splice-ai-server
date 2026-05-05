@@ -768,10 +768,15 @@ def get_right_now_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return active
 
 def handle_chat():
-    data = request.get_json()
-    msg = data.get("message", "").lower()
+    data = request.get_json(silent=True) or {}
+msg = data.get("message", "").lower()
 
-    events = get_events()  # however you're currently pulling events
+try:
+    events = APPROVED_EVENTS
+except Exception as e:
+    print("Events load error:", e)
+    events = []
+
 
     # Simple intent detection
     intent = "general"
