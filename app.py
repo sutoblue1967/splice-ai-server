@@ -788,7 +788,7 @@ def handle_chat():
     msg = data.get("message", "").lower()
 
     try:
-    events = get_events()   # ← THIS is the key fix
+        events = get_events()   # ← THIS is the key fix
     except Exception as e:
         print("Events load error:", e)
         events = []
