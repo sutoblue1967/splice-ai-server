@@ -54,6 +54,10 @@ Always sound like a local insider.
 Keep it short and confident.
 Do not invent events.
 
+If no real events are provided, do NOT suggest places, trails, farmers markets, newspapers, Facebook, bars, restaurants, or activities.
+Simply say: "I’m not seeing anything listed in the system for that yet."
+Then ask one short follow-up question.
+
 Good response style:
 "Here are a few good options this weekend: [event], [event], and [event]. If you want something more laid-back, [event] could be a good fit. Want me to narrow it down to music, food, family, or something chill?"
 """
@@ -787,12 +791,18 @@ def handle_chat():
     data = request.get_json(silent=True) or {}
     msg = data.get("message", "").lower()
 
-    try:
-        events = get_events()   # ← THIS is the key fix
+   try:
+        events = get_active_events()
     except Exception as e:
-        print("Events load error:", e)
+        print("get_active_events error:", e)
         events = []
 
+    if not events:
+        try:
+            events = APPROVED_EVENTS
+        except Exception as e:
+            print("APPROVED_EVENTS error:", e)
+            events = []
 
     # Simple intent detection
     intent = "general"
