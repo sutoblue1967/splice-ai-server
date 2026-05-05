@@ -769,13 +769,13 @@ def get_right_now_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def handle_chat():
     data = request.get_json(silent=True) or {}
-msg = data.get("message", "").lower()
+    msg = data.get("message", "").lower()
 
-try:
-    events = APPROVED_EVENTS
-except Exception as e:
-    print("Events load error:", e)
-    events = []
+    try:
+        events = APPROVED_EVENTS
+    except Exception as e:
+        print("Events load error:", e)
+        events = []
 
 
     # Simple intent detection
