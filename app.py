@@ -22,8 +22,13 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def generate_ai_response(user_message, events):
     try:
+        from openai import OpenAI
+        import os
+
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
         event_text = "\n".join([
-            f"- {e.get('title', 'Untitled')} at {e.get('location', 'Unknown')} on {e.get('start_dt', 'date unknown')}"
+            f"{e.get('title', 'Untitled')} at {e.get('location', 'Unknown location')}"
             for e in events[:5]
         ])
 
@@ -33,14 +38,13 @@ You are El, a local event insider for the Mid-Ohio Valley.
 User asked:
 {user_message}
 
-Real events available:
+Events:
 {event_text}
 
-Respond in 2–4 short sentences.
-Sound helpful, local, and conversational.
-Do not invent events.
-Only talk about the events provided.
-End with one simple follow-up question.
+Respond in a short, natural, conversational way.
+Be helpful and local.
+Do not make up events.
+End with a simple follow-up question.
 """
 
         response = client.responses.create(
@@ -51,7 +55,7 @@ End with one simple follow-up question.
         return response.output_text
 
     except Exception as e:
-        print("AI error:", e)
+        print("AI ERROR:", e)
         return None
 
 
