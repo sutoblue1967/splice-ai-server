@@ -29,7 +29,7 @@ def generate_ai_response(user_message, events):
 
         event_text = "\n".join([
             f"{e.get('title', 'Untitled')} at {e.get('location', 'Unknown location')}"
-           for e in (events or [{"title": "Test Event", "location": "Parkersburg"}])
+           for e in events[:5]
         ])
 
         prompt = f"""
@@ -788,11 +788,10 @@ def handle_chat():
     msg = data.get("message", "").lower()
 
     try:
-        events = APPROVED_EVENTS
+    events = APPROVED_EVENTS
     except Exception as e:
         print("Events load error:", e)
         events = []
-
 
     # Simple intent detection
     intent = "general"
