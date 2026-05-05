@@ -791,18 +791,19 @@ def handle_chat():
     data = request.get_json(silent=True) or {}
     msg = data.get("message", "").lower()
 
-   try:
+    try:
         events = get_active_events()
     except Exception as e:
         print("get_active_events error:", e)
         events = []
-
+    
     if not events:
         try:
             events = APPROVED_EVENTS
         except Exception as e:
             print("APPROVED_EVENTS error:", e)
             events = []
+
 
     # Simple intent detection
     intent = "general"
