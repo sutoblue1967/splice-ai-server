@@ -805,6 +805,7 @@ def handle_chat():
             events = []
 
 
+
     # Simple intent detection
     intent = "general"
     if "music" in msg:
