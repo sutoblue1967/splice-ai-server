@@ -29,7 +29,7 @@ def generate_ai_response(user_message, events):
 
         event_text = "\n".join([
             f"{e.get('title', 'Untitled')} at {e.get('location', 'Unknown location')}"
-            for e in events[:5]
+           for e in (events or [{"title": "Test Event", "location": "Parkersburg"}])
         ])
 
         prompt = f"""
