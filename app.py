@@ -788,10 +788,11 @@ def handle_chat():
     msg = data.get("message", "").lower()
 
     try:
-        events = APPROVED_EVENTS
+    events = get_events()   # ← THIS is the key fix
     except Exception as e:
         print("Events load error:", e)
         events = []
+
 
     # Simple intent detection
     intent = "general"
