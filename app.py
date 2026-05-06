@@ -817,19 +817,19 @@ def handle_chat():
     data = request.get_json(silent=True) or {}
     msg = data.get("message", "").lower()
 
-    try:
+   try:
         scraped_events = _cache.get("events", [])
         saved_events = load_saved_events()
     
-        events = scraped_events + saved_events
+        print("SCRAPED EVENTS COUNT:", len(scraped_events))
+        print("SAVED EVENTS COUNT:", len(saved_events))
+        print("SAVED EVENTS:", saved_events[:3])
     
+        events = scraped_events + saved_events
         print("CHAT EVENTS COUNT:", len(events))
     except Exception as e:
         print("Events load error:", e)
         events = []
-
-
-
 
 
     # Simple intent detection
