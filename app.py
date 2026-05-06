@@ -818,8 +818,6 @@ def handle_chat():
     msg = data.get("message", "").lower()
 
     try:
-        refresh_cache_if_needed(force=True)
-    
         scraped_events = _cache.get("events", [])
         saved_events = load_saved_events()
     
@@ -829,6 +827,7 @@ def handle_chat():
     except Exception as e:
         print("Events load error:", e)
         events = []
+
 
 
 
