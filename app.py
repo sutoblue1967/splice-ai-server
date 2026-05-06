@@ -1140,6 +1140,42 @@ def test_add_brewery_deal():
 
     return {"ok": True, "message": "Brewery deal added to pending"}
 
+def save_event_to_db(event):
+    conn = psycopg2.connect(DATABASE_URL)
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS events (
+            id SERIAL PRIMARY KEY,
+            title TEXT,
+            start_dt TEXT,
+            end_dt TEXT,
+            location TEXT,
+            source TEXT,
+            url TEXT,
+            category TEXT,
+            description TEXT
+        )
+    """)
+
+    cur.execute("""
+        INSERT INTO events (title, start_dt, end_dt, location, source, url, category, description)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        event.get("title"),
+        event.get("start_dt"),
+        event.get("end_dt"),
+        event.get("location"),
+        event.get("source"),
+        event.get("url"),
+        event.get("category"),
+        event.get("description"),
+    ))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
 
 @app.get("/approve-latest")
 def approve_latest():
@@ -1148,6 +1184,7 @@ def approve_latest():
 
     event = PENDING_EVENTS.pop()
     APPROVED_EVENTS.append(event)
+    save_event_to_db(event)
     save_one_event(event)
     save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
     save_events_to_file(APPROVED_EVENTS_FILE, APPROVED_EVENTS)
