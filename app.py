@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 import os
 import psycopg2
 DATABASE_URL = os.environ.get("DATABASE_URL")
+EVENTS_FILE = "events.json”
 
 from openai import OpenAI
 
@@ -754,8 +755,14 @@ def db_test():
 @app.get("/events")
 def events():
     refresh_cache_if_needed(force=True)
+
+    scraped_events = _cache.get("events", [])
+    saved_events = load_saved_events()
+
+    all_events = scraped_events + saved_events
+
     return app.response_class(
-        response=json.dumps(_cache.get("events", []), indent=2),
+        response=json.dumps(all_events, indent=2),
         status=200,
         mimetype="application/json",
     )
@@ -787,17 +794,42 @@ def get_right_now_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     return active
 
+def load_saved_events():
+    try:
+        with open(EVENTS_FILE, "r") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_saved_events(events):
+    with open(EVENTS_FILE, "w") as f:
+        json.dump(events, f, indent=2)
+
+
+def save_one_event(event):
+    events = load_saved_events()
+    events.append(event)
+    save_saved_events(events)
+
+
 def handle_chat():
     data = request.get_json(silent=True) or {}
     msg = data.get("message", "").lower()
 
     try:
-        refresh_cache_if_needed()
-        events = _cache.get("events", [])
+        refresh_cache_if_needed(force=True)
+    
+        scraped_events = _cache.get("events", [])
+        saved_events = load_saved_events()
+    
+        events = scraped_events + saved_events
+    
         print("CHAT EVENTS COUNT:", len(events))
     except Exception as e:
         print("Events load error:", e)
         events = []
+
 
 
 
@@ -1106,6 +1138,7 @@ def approve_latest():
 
     event = PENDING_EVENTS.pop()
     APPROVED_EVENTS.append(event)
+    save_one_event(event)
     save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
     save_events_to_file(APPROVED_EVENTS_FILE, APPROVED_EVENTS)
     _cache["ts"] = 0
