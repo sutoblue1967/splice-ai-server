@@ -29,9 +29,13 @@ def generate_ai_response(user_message, events):
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         event_text = "\n".join([
-            f"{e.get('title', 'Untitled')} at {e.get('location', 'Unknown location')}"
-           for e in events[:5]
-        ])
+        f"EVENT {i+1}:\n"
+        f"Title: {e.get('title', 'Untitled')}\n"
+        f"Location: {e.get('location', 'Unknown location')}\n"
+        f"Start: {e.get('start_dt', 'Time not listed')}\n"
+        for i, e in enumerate(events[:5])
+    ])
+
 
         prompt = f"""
 You are El, a local event insider for the Mid-Ohio Valley.
@@ -54,6 +58,10 @@ Say that briefly, then suggest alternatives.
 Always sound like a local insider.
 Keep it short and confident.
 Do not invent events.
+
+When mentioning events, keep each event separate.
+Use the title, location, and start time exactly as provided.
+Do not combine multiple events into one sentence.
 
 If no real events are provided, do NOT suggest places, trails, farmers markets, newspapers, Facebook, bars, restaurants, or activities.
 Simply say: "I’m not seeing anything listed in the system for that yet."
