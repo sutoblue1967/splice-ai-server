@@ -87,6 +87,49 @@ Good response style:
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require')
 
+def load_events_from_db():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS events (
+            id SERIAL PRIMARY KEY,
+            title TEXT,
+            start_dt TEXT,
+            end_dt TEXT,
+            location TEXT,
+            source TEXT,
+            url TEXT,
+            category TEXT,
+            description TEXT
+        )
+    """)
+
+    cur.execute("""
+        SELECT title, start_dt, end_dt, location, source, url, category, description
+        FROM events
+        ORDER BY start_dt ASC NULLS LAST
+    """)
+
+    rows = cur.fetchall()
+
+    events = []
+    for r in rows:
+        events.append({
+            "title": r[0],
+            "start_dt": r[1],
+            "end_dt": r[2],
+            "location": r[3],
+            "source": r[4],
+            "url": r[5],
+            "category": r[6],
+            "description": r[7],
+        })
+
+    cur.close()
+    conn.close()
+    return events
+
 
 def load_events_from_file(filename: str) -> List[Dict[str, Any]]:
     if not os.path.exists(filename):
@@ -765,7 +808,7 @@ def events():
     refresh_cache_if_needed(force=True)
 
     scraped_events = _cache.get("events", [])
-    saved_events = load_saved_events()
+    saved_events = load_events_from_db()
 
     all_events = scraped_events + saved_events
 
