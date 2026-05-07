@@ -808,15 +808,16 @@ def events():
     refresh_cache_if_needed(force=True)
 
     scraped_events = _cache.get("events", [])
-    saved_events = load_events_from_db()
+    db_events = load_events_from_db()
 
-    all_events = scraped_events + saved_events
+    all_events = scraped_events + db_events
 
     return app.response_class(
         response=json.dumps(all_events, indent=2),
         status=200,
         mimetype="application/json",
     )
+
 
 def get_right_now_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     now = now_utc()
