@@ -1176,40 +1176,48 @@ def test_add_brewery_deal():
     return {"ok": True, "message": "Brewery deal added to pending"}
 
 def save_event_to_db(event):
-    conn = psycopg2.connect(DATABASE_URL, sslmode="require")
-    cur = conn.cursor()
+    try:
+        print("TRYING TO SAVE EVENT:", event)
 
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS events (
-            id SERIAL PRIMARY KEY,
-            title TEXT,
-            start_dt TEXT,
-            end_dt TEXT,
-            location TEXT,
-            source TEXT,
-            url TEXT,
-            category TEXT,
-            description TEXT
-        )
-    """)
+        conn = psycopg2.connect(DATABASE_URL, sslmode="require")
+        cur = conn.cursor()
 
-    cur.execute("""
-        INSERT INTO events (title, start_dt, end_dt, location, source, url, category, description)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    """, (
-        event.get("title"),
-        event.get("start_dt"),
-        event.get("end_dt"),
-        event.get("location"),
-        event.get("source"),
-        event.get("url"),
-        event.get("category"),
-        event.get("description"),
-    ))
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id SERIAL PRIMARY KEY,
+                title TEXT,
+                start_dt TEXT,
+                end_dt TEXT,
+                location TEXT,
+                source TEXT,
+                url TEXT,
+                category TEXT,
+                description TEXT
+            )
+        """)
 
-    conn.commit()
-    cur.close()
-    conn.close()
+        cur.execute("""
+            INSERT INTO events (title, start_dt, end_dt, location, source, url, category, description)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            event.get("title"),
+            event.get("start_dt"),
+            event.get("end_dt"),
+            event.get("location"),
+            event.get("source"),
+            event.get("url"),
+            event.get("category"),
+            event.get("description"),
+        ))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        print("EVENT SAVED TO DB SUCCESSFULLY")
+
+    except Exception as e:
+        print("SAVE EVENT TO DB ERROR:", e)
 
 
 @app.get("/approve-latest")
