@@ -869,11 +869,11 @@ def handle_chat():
 
     
     try:
-    events = get_all_events()
-    print("CHAT EVENTS COUNT:", len(events))
-except Exception as e:
-    print("Events load error:", e)
-    events = []
+        events = get_all_events()
+        print("CHAT EVENTS COUNT:", len(events))
+    except Exception as e:
+        print("Events load error:", e)
+        events = []
 
 
 
