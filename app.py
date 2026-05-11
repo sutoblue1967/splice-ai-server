@@ -130,6 +130,9 @@ def load_events_from_db():
     conn.close()
     return events
 
+def get_all_events():
+    return load_events_from_db()
+
 
 def load_events_from_file(filename: str) -> List[Dict[str, Any]]:
     if not os.path.exists(filename):
@@ -805,15 +808,10 @@ def db_test():
 
 @app.get("/events")
 def events():
-    refresh_cache_if_needed(force=True)
-
-    scraped_events = _cache.get("events", [])
-    db_events = load_events_from_db()
-
-    all_events = scraped_events + db_events
+    events = get_all_events()
 
     return app.response_class(
-        response=json.dumps(all_events, indent=2),
+        response=json.dumps(events, indent=2),
         status=200,
         mimetype="application/json",
     )
@@ -871,19 +869,11 @@ def handle_chat():
 
     
     try:
-        scraped_events = _cache.get("events", [])
-        saved_events = load_saved_events()
-        print("SAVED EVENTS:", saved_events)
-    
-        print("SCRAPED EVENTS COUNT:", len(scraped_events))
-        print("SAVED EVENTS COUNT:", len(saved_events))
-        print("SAVED EVENTS:", saved_events[:3])
-    
-        events = scraped_events + saved_events
-        print("CHAT EVENTS COUNT:", len(events))
-    except Exception as e:
-        print("Events load error:", e)
-        events = []
+    events = get_all_events()
+    print("CHAT EVENTS COUNT:", len(events))
+except Exception as e:
+    print("Events load error:", e)
+    events = []
 
 
 
