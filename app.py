@@ -1226,12 +1226,14 @@ def approve_latest():
         return {"ok": False, "message": "No pending events to approve"}, 404
 
     event = PENDING_EVENTS.pop()
+    print("APPROVING EVENT:", event)
+    
     APPROVED_EVENTS.append(event)
+    
+    print("ABOUT TO SAVE TO DB")
     save_event_to_db(event)
-    save_one_event(event)
-    save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
-    save_events_to_file(APPROVED_EVENTS_FILE, APPROVED_EVENTS)
-    _cache["ts"] = 0
+    print("FINISHED SAVE TO DB")
+
 
 
     return {"ok": True, "message": "Latest pending event approved", "event": event}
