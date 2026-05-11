@@ -873,6 +873,7 @@ def handle_chat():
     try:
         scraped_events = _cache.get("events", [])
         saved_events = load_saved_events()
+        print("SAVED EVENTS:", saved_events)
     
         print("SCRAPED EVENTS COUNT:", len(scraped_events))
         print("SAVED EVENTS COUNT:", len(saved_events))
