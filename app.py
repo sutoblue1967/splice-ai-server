@@ -1576,6 +1576,9 @@ def approve_pending(event_index: int):
 
     event = PENDING_EVENTS.pop(event_index)
     APPROVED_EVENTS.append(event)
+    save_event_to_db(event)
+    save_one_event(event)
+
     _cache["ts"] = 0
 
     return """
