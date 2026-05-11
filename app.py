@@ -1176,7 +1176,7 @@ def test_add_brewery_deal():
     return {"ok": True, "message": "Brewery deal added to pending"}
 
 def save_event_to_db(event):
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg2.connect(DATABASE_URL, sslmode="require")
     cur = conn.cursor()
 
     cur.execute("""
