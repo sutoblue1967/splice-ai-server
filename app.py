@@ -37,13 +37,30 @@ def generate_ai_response(user_message, events):
             except:
                 return dt_string
         
-        event_text = "\n".join([
+       events = []
+
+        for row in rows:
+            events.append({
+                "title": row[0],
+                "start_dt": row[1],
+                "end_dt": row[2],
+                "location": row[3],
+                "source": row[4],
+                "url": row[5],
+                "category": row[6],
+                "description": row[7]
+            })
+        
+        event_text = "\n\n".join([
             f"EVENT {i+1}:\n"
             f"Title: {e.get('title', 'Untitled')}\n"
-            f"Location: {e.get('location', 'Unknown location')}\n"
-            f"Start: {format_event_time(e.get('start_dt', 'Time not listed'))}\n"
+            f"When: {format_event_time(e.get('start_dt', ''))}\n"
+            f"Where: {e.get('location', 'Unknown location')}\n"
+            f"Category: {e.get('category', '')}\n"
+            f"Description: {e.get('description', '')}"
             for i, e in enumerate(events[:5])
         ])
+
 
 
 
