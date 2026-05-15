@@ -29,28 +29,13 @@ def generate_ai_response(user_message, events):
 
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
         def format_event_time(dt_string):
             try:
                 dt = datetime.fromisoformat(dt_string)
-                return dt.strftime("%A, %B %d at %I:%M %p").replace(" 0", " ")
+                return dt.strftime("%A, %B %d at %-I:%M %p").replace(" 0", " ")
             except:
                 return dt_string
-        
-       events = []
 
-        for row in rows:
-            events.append({
-                "title": row[0],
-                "start_dt": row[1],
-                "end_dt": row[2],
-                "location": row[3],
-                "source": row[4],
-                "url": row[5],
-                "category": row[6],
-                "description": row[7]
-            })
-        
         event_text = "\n\n".join([
             f"EVENT {i+1}:\n"
             f"Title: {e.get('title', 'Untitled')}\n"
@@ -61,10 +46,8 @@ def generate_ai_response(user_message, events):
             for i, e in enumerate(events[:5])
         ])
 
+        prompt = f""”
 
-
-
-        prompt = f"""
 You are El, a local event insider for the Mid-Ohio Valley.
 
 User asked:
