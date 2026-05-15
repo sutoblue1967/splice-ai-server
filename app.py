@@ -1103,74 +1103,41 @@ def bulk_ingest_post():
 
 @app.post("/bulk-ingest-save")
 def bulk_ingest_save():
-    venues = request.form.getlist("venue")
-    dates = request.form.getlist("date")
+
     titles = request.form.getlist("title")
-    times = request.form.getlist("time")
+    start_dts = request.form.getlist("start_dt")
+    end_dts = request.form.getlist("end_dt")
+    locations = request.form.getlist("location")
+    sources = request.form.getlist("source")
+    urls = request.form.getlist("url")
+    categories = request.form.getlist("category")
+    descriptions = request.form.getlist("description")
 
     count = 0
-    current_year = datetime.now().year
 
-    def parse_time_part(t):
-        t = t.strip().lower().replace(" ", "")
-        if ":" in t:
-            return datetime.strptime(t, "%I:%M%p")
-        return datetime.strptime(t, "%I%p")
-
-    for venue, date_part, title, time_part in zip(venues, dates, titles, times):
-        start_dt = None
-        end_dt = None
-
-        try:
-            month, day = date_part.split("/")
-            base_date = datetime(current_year, int(month), int(day))
-
-            time_part = time_part.lower().replace("–", "-")
-            start_time_str, end_time_str = [x.strip() for x in time_part.split("-")]
-
-            if ("am" not in start_time_str and "pm" not in start_time_str) and ("am" in end_time_str or "pm" in end_time_str):
-                if "am" in end_time_str:
-                    start_time_str += "am"
-                else:
-                    start_time_str += "pm"
-
-            start_time = parse_time_part(start_time_str)
-            end_time = parse_time_part(end_time_str)
-
-            start_dt_obj = base_date.replace(hour=start_time.hour, minute=start_time.minute, second=0, microsecond=0)
-            end_dt_obj = base_date.replace(hour=end_time.hour, minute=end_time.minute, second=0, microsecond=0)
-
-            start_dt = start_dt_obj.isoformat()
-            end_dt = end_dt_obj.isoformat()
-
-        except Exception:
-            start_dt = date_part
-            end_dt = None
+    for i in range(len(titles)):
 
         event = {
-            "title": title,
-            "start_dt": start_dt,
-            "end_dt": end_dt,
-            "location": venue,
-            "source": "Bulk Ingest",
-            "url": "",
-            "category": "event",
-            "description": f"{title} at {venue} from {time_part}"
+            "title": titles[i],
+            "start_dt": start_dts[i],
+            "end_dt": end_dts[i],
+            "location": locations[i],
+            "source": sources[i],
+            "url": urls[i],
+            "category": categories[i],
+            "description": descriptions[i]
         }
 
         PENDING_EVENTS.append(event)
         count += 1
 
-    save_event_to_db(event)
-    count += 1
-    
-    _cache["ts"] = 0
+    save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
 
     return f"""
     <html>
-    <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
+    <body style="font-family: Arial; max-width: 800px; margin: 40px auto;">
         <h2>Bulk Ingest Complete</h2>
-        <p><strong>{count}</strong> events were saved to live events.</p>
+        <p>{count} events sent to pending review.</p>
 
         <p><a href="/review-pending">Review Pending Events</a></p>
         <p><a href="/bulk-ingest">Back to Bulk Ingest</a></p>
