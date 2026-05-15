@@ -1021,51 +1021,45 @@ def bulk_ingest_post():
 
     import re
 
-    lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
-
-    current_title = ""
-    current_venue = ""
     events = []
-
-    event_pattern_numeric = re.compile(
-        r"^(\d{1,2}/\d{1,2})\s*-\s*(.+?)\s+(\d{1,2}(?::\d{2})?(?:am|pm)?\s*[–-]\s*\d{1,2}(?::\d{2})?(?:am|pm)?)$",
-        re.IGNORECASE
-    )
-
-    event_pattern_long = re.compile(
-        r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4},",
-        re.IGNORECASE
-    )
-
-    for line in lines:
-
-        # --- NUMERIC FORMAT (4/22 - Band 5–7pm) ---
-        match = event_pattern_numeric.match(line)
-        if match:
-            date_part = match.group(1).strip()
-            title_part = match.group(2).strip()
-            time_part = match.group(3).strip()
-
-            events.append({
-                "title": title_part,
-                "date": date_part,
-                "time": time_part,
-                "venue": current_venue or current_title,
-                "raw": line
-            })
+    blocks = raw_text.split("Title:")
+    
+    for block in blocks:
+        block = block.strip()
+        if not block:
             continue
+    
+        block = "Title:" + block
+        event = {}
+    
+        for line in block.splitlines():
+            if ":" not in line:
+                continue
+    
+            key, value = line.split(":", 1)
+            key = key.strip().lower()
+            value = value.strip()
+    
+            if key == "title":
+                event["title"] = value
+            elif key == "start date/time":
+                event["start_dt"] = value
+            elif key == "end date/time":
+                event["end_dt"] = value
+            elif key == "location":
+                event["location"] = value
+            elif key == "source":
+                event["source"] = value
+            elif key == "url":
+                event["url"] = value
+            elif key == "category":
+                event["category"] = value
+            elif key == "description":
+                event["description"] = value
+    
+        if event.get("title") and event.get("start_dt"):
+            events.append(event)
 
-        # --- LONG FORMAT (April 24, 2026, 9:00 am–4:00 pm) ---
-        if event_pattern_long.match(line):
-            parts = line.split(",")
-
-
-    else:
-        # Detect address (very basic)
-        if any(word in line.lower() for word in ["street", "st", "avenue", "ave", "road", "rd", "parkersburg"]):
-            venue = line
-        else:
-            current_venue = line
 
     hidden_inputs = ""
     for e in events:
