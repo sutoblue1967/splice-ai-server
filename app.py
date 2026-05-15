@@ -194,6 +194,20 @@ _cache: Dict[str, Any] = {
     "events": [],
 }
 
+def filter_future_events(events):
+    today = datetime.now().date()
+    filtered = []
+
+    for e in events:
+        try:
+            start = dtparser.isoparse(e.get("start_dt", "")).date()
+            if start >= today:
+                filtered.append(e)
+        except Exception:
+            continue
+
+    return filtered
+
 @app.get("/test-add-event")
 def test_add_event():
     event = {
@@ -870,6 +884,7 @@ def handle_chat():
     
     try:
         events = get_all_events()
+        events = filter_future_events(events)
         print("CHAT EVENTS COUNT:", len(events))
     except Exception as e:
         print("Events load error:", e)
