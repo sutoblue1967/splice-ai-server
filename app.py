@@ -1145,7 +1145,7 @@ def bulk_ingest_save():
     <html>
     <body style="font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px;">
         <h2>Bulk Ingest Complete</h2>
-        <p><strong>{count}</strong> events were sent to pending.</p>
+        <p><strong>{count}</strong> events were saved to live events.</p>
 
         <p><a href="/review-pending">Review Pending Events</a></p>
         <p><a href="/bulk-ingest">Back to Bulk Ingest</a></p>
