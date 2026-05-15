@@ -1083,9 +1083,15 @@ def bulk_ingest_post():
         <h3>Detected Events</h3>
         <ul>
             {''.join([
-                f"<li><strong>{e['title']}</strong><br>Date: {e['date']}<br>Time: {e['time']}<br>Venue: {e['venue']}</li><br>"
+                f"<li><strong>{e.get('title', '')}</strong><br>"
+                f"Start: {e.get('start_dt', '')}<br>"
+                f"End: {e.get('end_dt', '')}<br>"
+                f"Location: {e.get('location', '')}<br>"
+                f"Category: {e.get('category', '')}<br><br></li>"
                 for e in events
             ])}
+
+                
         </ul>
 
         <form method="post" action="/bulk-ingest-save">
