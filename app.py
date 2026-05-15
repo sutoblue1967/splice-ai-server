@@ -58,7 +58,20 @@ These are the real events currently available:
 
 Important rules:
 If events are available:
-Start by clearly listing 2–3 events with names and locations.
+When listing events, format each event like this:
+
+EVENT TITLE
+Date/time
+Location
+Short one-line note if helpful
+
+Put a blank line between each event.
+
+Do not write events in one long sentence.
+Do not over-explain.
+Keep the response easy to scan on a phone.
+Only show 3 events unless the user asks for more.
+
 Then add a short, friendly sentence with a local tone.
 End with one simple follow-up question.
 
@@ -123,18 +136,16 @@ def load_events_from_db():
 
     rows = cur.fetchall()
 
-    events = []
-    for r in rows:
-        events.append({
-            "title": r[0],
-            "start_dt": r[1],
-            "end_dt": r[2],
-            "location": r[3],
-            "source": r[4],
-            "url": r[5],
-            "category": r[6],
-            "description": r[7],
-        })
+    event_text = "\n\n".join([
+        f"EVENT {i+1}:\n"
+        f"Title: {e.get('title', 'Untitled')}\n"
+        f"When: {format_event_time(e.get('start_dt', ''))}\n"
+        f"Where: {e.get('location', 'Unknown location')}\n"
+        f"Category: {e.get('category', '')}\n"
+        f"Description: {e.get('description', '')}"
+        for i, e in enumerate(events[:5])
+    ])
+
 
     cur.close()
     conn.close()
