@@ -30,20 +30,20 @@ def generate_ai_response(user_message, events):
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def format_event_time(dt_string):
-    try:
-        dt = datetime.fromisoformat(dt_string)
-        return dt.strftime("%A, %B %d at %I:%M %p").replace(" 0", " ")
-    except:
-        return dt_string
-
-event_text = "\n".join([
-    f"EVENT {i+1}:\n"
-    f"Title: {e.get('title', 'Untitled')}\n"
-    f"Location: {e.get('location', 'Unknown location')}\n"
-    f"Start: {format_event_time(e.get('start_dt', 'Time not listed'))}\n"
-    for i, e in enumerate(events[:5])
-])
+        def format_event_time(dt_string):
+            try:
+                dt = datetime.fromisoformat(dt_string)
+                return dt.strftime("%A, %B %d at %I:%M %p").replace(" 0", " ")
+            except:
+                return dt_string
+        
+        event_text = "\n".join([
+            f"EVENT {i+1}:\n"
+            f"Title: {e.get('title', 'Untitled')}\n"
+            f"Location: {e.get('location', 'Unknown location')}\n"
+            f"Start: {format_event_time(e.get('start_dt', 'Time not listed'))}\n"
+            for i, e in enumerate(events[:5])
+        ])
 
 
 
