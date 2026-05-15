@@ -1136,7 +1136,9 @@ def bulk_ingest_save():
         PENDING_EVENTS.append(event)
         count += 1
 
-    save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
+    save_event_to_db(event)
+    count += 1
+    
     _cache["ts"] = 0
 
     return f"""
