@@ -1069,12 +1069,17 @@ def bulk_ingest_post():
 
     hidden_inputs = ""
     for e in events:
-        hidden_inputs += f'''
-        <input type="hidden" name="venue" value="{e["venue"]}">
-        <input type="hidden" name="date" value="{e["date"]}">
-        <input type="hidden" name="title" value="{e["title"]}">
-        <input type="hidden" name="time" value="{e["time"]}">
-        '''
+        hidden_inputs += f"""
+        <input type="hidden" name="title" value="{e.get('title', '')}">
+        <input type="hidden" name="start_dt" value="{e.get('start_dt', '')}">
+        <input type="hidden" name="end_dt" value="{e.get('end_dt', '')}">
+        <input type="hidden" name="location" value="{e.get('location', '')}">
+        <input type="hidden" name="source" value="{e.get('source', 'Bulk Import')}">
+        <input type="hidden" name="url" value="{e.get('url', '')}">
+        <input type="hidden" name="category" value="{e.get('category', '')}">
+        <input type="hidden" name="description" value="{e.get('description', '')}">
+        """
+
 
     return f"""
     <html>
