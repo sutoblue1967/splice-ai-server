@@ -24,7 +24,7 @@ from openai import OpenAI
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def generate_ai_response(user_message, events, conversation_history=None): = []
+def generate_ai_response(user_message, events, conversation_history=None):
     try:
         from openai import OpenAI
         import os
@@ -978,7 +978,14 @@ def handle_chat():
 
     # 🔥 AI LAYER (SAFE WRAPPED)
     try:
-        ai_reply = generate_ai_response(msg, events)
+        ai_reply = generate_ai_response(msg, events, CONVERSATION_HISTORY)
+        
+        CONVERSATION_HISTORY.append({"role": "user", "content": msg})
+        CONVERSATION_HISTORY.append({"role": "assistant", "content": ai_reply})
+        
+        if len(CONVERSATION_HISTORY) > 10:
+            del CONVERSATION_HISTORY[:-10]
+    
         if ai_reply:
             return jsonify({"message": ai_reply}), 200
     except Exception as e:
