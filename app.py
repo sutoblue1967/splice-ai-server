@@ -16,12 +16,15 @@ import psycopg2
 DATABASE_URL = os.environ.get("DATABASE_URL")
 EVENTS_FILE = "events.json"
 
+CONVERSATION_HISTORY = []
+
+
 from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-def generate_ai_response(user_message, events):
+def generate_ai_response(user_message, events, conversation_history=None): = []
     try:
         from openai import OpenAI
         import os
@@ -256,6 +259,7 @@ def test_add_event():
     PENDING_EVENTS.append(event)
     save_events_to_file(PENDING_EVENTS_FILE, PENDING_EVENTS)
     _cache["ts"] = 0
+    
 
 
     return {"ok": True, "message": "Test event added"}
