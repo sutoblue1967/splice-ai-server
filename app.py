@@ -969,13 +969,16 @@ def handle_chat():
     elif "today" in msg:
         intent = "today"
 
+    scoped = filter_by_intent(events, intent)
+
+
     # Build basic event list
     if not events:
         reply_body = "I’m not seeing any upcoming events from my current sources."
     else:
         reply_body = "\n".join([
             f"{e.get('title', 'Untitled')} — {e.get('location', 'Unknown location')}"
-            for e in events[:5]
+            for e in scoped[:5]
         ])
 
     # Tone variations
