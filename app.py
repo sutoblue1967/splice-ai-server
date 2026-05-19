@@ -822,6 +822,15 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
 
         return out
 
+    if intent == "right_now":
+        active = get_right_now_events(events)
+    
+        if active:
+            return active
+    
+        return []
+
+
     keywords = {
         "music": ["music", "concert", "band", "live", "show"],
         "art": ["art", "exhibit", "gallery"],
