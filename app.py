@@ -715,6 +715,22 @@ def format_events(events: List[Dict[str, Any]], limit: int = 6) -> str:
                 when = "Date coming soon"
 
         parts = [title, when]
+        if end_dt:
+            try:
+                ed = dtparser.isoparse(end_dt)
+        
+                if ed.tzinfo is None:
+                    ed = ed.replace(tzinfo=timezone.utc)
+        
+                ed = ed.astimezone()
+        
+                ends_text = ed.strftime("Ends at %-I:%M %p")
+        
+                parts.append(ends_text)
+        
+            except Exception:
+                pass
+
 
         if description:
             parts.append(description)
