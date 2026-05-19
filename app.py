@@ -39,15 +39,14 @@ def generate_ai_response(user_message, events, conversation_history=None):
             except:
                 return dt_string
 
-        event_text = "\n\n".join([
-            f"EVENT {i+1}:\n"
-            f"Title: {e.get('title', 'Untitled')}\n"
-            f"When: {format_event_time(e.get('start_dt', ''))}\n"
-            f"Where: {e.get('location', 'Unknown location')}\n"
-            f"Category: {e.get('category', '')}\n"
-            f"Description: {e.get('description', '')}"
-            for i, e in enumerate(events[:5])
-        ])
+        event_text += (
+            f"Title: {e.get('title', '')}\n"
+            f"Start: {format_event_time(e.get('start_dt', ''))}\n"
+            f"Ends: {format_event_time(e.get('end_dt', ''))}\n"
+            f"Location: {e.get('location', '')}\n"
+            f"Description: {e.get('description', '')}\n\n"
+        )
+
 
         prompt = f"""
 
@@ -994,7 +993,7 @@ def handle_chat():
 
     # 🔥 AI LAYER (SAFE WRAPPED)
     try:
-        ai_reply = generate_ai_response(msg, events, CONVERSATION_HISTORY)
+        ai_reply = generate_ai_response(msg, scoped, CONVERSATION_HISTORY)
         
         CONVERSATION_HISTORY.append({"role": "user", "content": msg})
         CONVERSATION_HISTORY.append({"role": "assistant", "content": ai_reply})
