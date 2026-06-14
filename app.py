@@ -978,7 +978,7 @@ def handle_chat():
     scoped = filter_by_intent(events, intent)
 
 
-   if not scoped:
+    if not scoped:
         reply_body = "I'm not seeing any upcoming events from my current sources."
     else:
         lines = []
