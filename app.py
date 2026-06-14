@@ -974,16 +974,15 @@ def handle_chat():
     scoped = filter_by_intent(events, intent)
 
 
-    # Build basic event list
-    if not events:
-        reply_body = "I’m not seeing any upcoming events from my current sources."
+   # Build basic event list
+    if not scoped:
+        reply_body = "I'm not seeing any upcoming events from my current sources."
     else:
         reply_body = "\n".join([
             f"{e.get('title', 'Untitled')} — {e.get('location', 'Unknown location')}"
-            elif "right now" in msg:
-            intent = "right_now"
-
+            for e in scoped[:5]
         ])
+
 
     # Tone variations
     if intent == "music":
