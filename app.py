@@ -981,7 +981,7 @@ def handle_chat():
         reply_body = "\n".join([
             f"{e.get('title', 'Untitled')} — {e.get('location', 'Unknown location')}"
             elif "right now" in msg:
-            intent = "right_now”
+            intent = "right_now"
 
         ])
 
