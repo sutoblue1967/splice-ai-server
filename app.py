@@ -39,13 +39,17 @@ def generate_ai_response(user_message, events, conversation_history=None):
             except:
                 return dt_string
 
-        event_text += (
-            f"Title: {e.get('title', '')}\n"
-            f"Start: {format_event_time(e.get('start_dt', ''))}\n"
-            f"Ends: {format_event_time(e.get('end_dt', ''))}\n"
-            f"Location: {e.get('location', '')}\n"
-            f"Description: {e.get('description', '')}\n\n"
-        )
+        event_text = ""
+
+        for e in events[:5]:
+            event_text += (
+                f"Title: {e.get('title', '')}\n"
+                f"Start: {format_event_time(e.get('start_dt', ''))}\n"
+                f"Ends: {format_event_time(e.get('end_dt', ''))}\n"
+                f"Location: {e.get('location', '')}\n"
+                f"Description: {e.get('description', '')}\n\n"
+            )
+
 
 
         prompt = f"""
