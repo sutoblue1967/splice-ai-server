@@ -968,6 +968,8 @@ def handle_chat():
         intent = "classes"
     elif "today" in msg:
         intent = "today"
+    elif "right now" in msg:
+    intent = "right_now”    
 
     scoped = filter_by_intent(events, intent)
 
@@ -978,7 +980,9 @@ def handle_chat():
     else:
         reply_body = "\n".join([
             f"{e.get('title', 'Untitled')} — {e.get('location', 'Unknown location')}"
-            for e in scoped[:5]
+            elif "right now" in msg:
+            intent = "right_now”
+
         ])
 
     # Tone variations
