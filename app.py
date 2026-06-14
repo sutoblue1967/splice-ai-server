@@ -969,7 +969,7 @@ def handle_chat():
     elif "today" in msg:
         intent = "today"
     elif "right now" in msg:
-    intent = "right_now”    
+    intent = "right_now"    
 
     scoped = filter_by_intent(events, intent)
 
