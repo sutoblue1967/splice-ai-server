@@ -849,12 +849,12 @@ def filter_by_intent(events: List[Dict[str, Any]], intent: str) -> List[Dict[str
     out = []
     for e in events:
        hay = " ".join([
-            str(e.get("title", "")),
-            str(e.get("location", "")),
-            str(e.get("source", "")),
-            str(e.get("url", "")),
-            str(e.get("category", "")),
-            str(e.get("description", "")),
+         str(e.get("title", "")),
+         str(e.get("location", "")),
+         str(e.get("source", "")),
+         str(e.get("url", "")),
+         str(e.get("category", "")),
+         str(e.get("description", "")),
         ]).lower()
 
 
