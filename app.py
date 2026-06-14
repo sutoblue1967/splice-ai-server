@@ -974,14 +974,26 @@ def handle_chat():
     scoped = filter_by_intent(events, intent)
 
 
-   # Build basic event list
-    if not scoped:
+   if not scoped:
         reply_body = "I'm not seeing any upcoming events from my current sources."
     else:
-        reply_body = "\n".join([
-            f"{e.get('title', 'Untitled')} — {e.get('location', 'Unknown location')}"
-            for e in scoped[:5]
-        ])
+        lines = []
+
+        for e in scoped[:5]:
+            title = e.get("title", "Untitled")
+            location = e.get("location", "Location TBD")
+            description = e.get("description", "")
+    
+            start_dt = e.get("start_dt", "")
+    
+            lines.append(
+                f"{title}\n"
+                f"{location}\n"
+                f"{description}"
+            )
+    
+        reply_body = "\n\n".join(lines)
+
 
 
     # Tone variations
