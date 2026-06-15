@@ -948,8 +948,11 @@ def save_one_event(event):
 
 
 def handle_chat():
+    global CURRENT_EVENT, CURRENT_EVENTS
+
     data = request.get_json(silent=True) or {}
     msg = data.get("message", "").lower()
+
 
     
     try:
@@ -1039,8 +1042,6 @@ def handle_chat():
         outro = "\n\nWant me to narrow it down by music, food, family, or art?"
 
     reply = f"{intro}\n\n{reply_body}{outro}"
-
-    global CURRENT_EVENT, CURRENT_EVENTS
 
     CURRENT_EVENTS = scoped[:5]
     
