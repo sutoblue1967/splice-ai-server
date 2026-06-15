@@ -959,6 +959,21 @@ def handle_chat():
     except Exception as e:
         print("Events load error:", e)
         events = []
+        
+    global CURRENT_EVENT, CURRENT_EVENTS
+
+    if any(word in msg for word in [
+        "directions",
+        "address",
+        "where is it",
+        "where's it",
+        "where is this",
+        "location"
+    ]) and CURRENT_EVENT:
+
+        return jsonify({
+            "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {CURRENT_EVENT.get('location', 'the listed location')}."
+        }), 200
 
 
 
@@ -1024,6 +1039,14 @@ def handle_chat():
         outro = "\n\nWant me to narrow it down by music, food, family, or art?"
 
     reply = f"{intro}\n\n{reply_body}{outro}"
+
+    global CURRENT_EVENT, CURRENT_EVENTS
+
+    CURRENT_EVENTS = scoped[:5]
+    
+    if len(CURRENT_EVENTS) == 1:
+        CURRENT_EVENT = CURRENT_EVENTS[0]
+
 
     # 🔥 AI LAYER (SAFE WRAPPED)
     try:
