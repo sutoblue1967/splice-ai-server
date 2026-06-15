@@ -983,10 +983,18 @@ def handle_chat():
 
     if CURRENT_EVENT:
 
-        if any(x in msg for x in ["time", "start", "when"]):
+       if any(x in msg for x in ["time", "start", "when"]):
+                dt = CURRENT_EVENT.get("start_dt", "")
+            
+                try:
+                    pretty_time = datetime.fromisoformat(dt).strftime("%A, %B %d at %-I:%M %p").replace(" 0", " ")
+                except:
+                    pretty_time = dt
+            
                 return jsonify({
-                    "message": f"{CURRENT_EVENT.get('title', 'That event')} starts on {CURRENT_EVENT.get('start_dt', '')}"
+                    "message": f"{CURRENT_EVENT.get('title', 'That event')} starts {pretty_time}."
                 }), 200
+
 
     
         if any(x in msg for x in ["where", "location", "address"]):
