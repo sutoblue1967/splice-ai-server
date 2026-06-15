@@ -31,15 +31,16 @@ def generate_ai_response(user_message, events, conversation_history=None):
         from openai import OpenAI
         import os
         from datetime import datetime
-
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
         def format_event_time(dt_string):
             try:
                 dt = datetime.fromisoformat(dt_string)
                 return dt.strftime("%A, %B %d at %-I:%M %p").replace(" 0", " ")
             except:
                 return dt_string
+
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    
 
         event_text = ""
 
@@ -981,8 +982,7 @@ def handle_chat():
         )
 
         return jsonify({
-            "message": f"{CURRENT_EVENT.get('title', 'That event')} starts {pretty_time}."
-        }), 200
+            "message": f"{CURRENT_EVENT.get('title', 'That event')} starts {format_event_time(CURRENT_EVENT.get('start_dt', ''))}”
 
 
         return jsonify({
