@@ -17,6 +17,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 EVENTS_FILE = "events.json"
 
 CONVERSATION_HISTORY = []
+CURRENT_EVENT = None
+CURRENT_EVENTS = []
 
 
 from openai import OpenAI
