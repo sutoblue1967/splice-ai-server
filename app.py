@@ -982,7 +982,7 @@ def handle_chat():
         )
 
         return jsonify({
-            "message": f"{CURRENT_EVENT.get('title', 'That event')} starts {format_event_time(CURRENT_EVENT.get('start_dt', ''))}”
+            "message": f"{CURRENT_EVENT.get('title', 'That event')} starts {format_event_time(CURRENT_EVENT.get('start_dt', ''))}"
 
 
         return jsonify({
