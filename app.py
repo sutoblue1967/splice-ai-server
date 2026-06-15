@@ -976,6 +976,15 @@ def handle_chat():
         "location"
     ]) and CURRENT_EVENT:
 
+        pretty_time = format_event_time(
+            CURRENT_EVENT.get("start_dt", "")
+        )
+
+        return jsonify({
+            "message": f"{CURRENT_EVENT.get('title', 'That event')} starts {pretty_time}."
+        }), 200
+
+
         return jsonify({
             "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {CURRENT_EVENT.get('location', 'the listed location')}."
         }), 200
