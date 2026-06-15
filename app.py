@@ -984,8 +984,9 @@ def handle_chat():
 
         if any(x in msg for x in ["time", "start", "when"]):
                 return jsonify({
-                    "message": f"{CURRENT_EVENT.get('title', 'That event')} starts at {format_event_time(CURRENT_EVENT.get('start_dt', ''))}."
+                    "message": f"{CURRENT_EVENT.get('title', 'That event')} starts on {CURRENT_EVENT.get('start_dt', '')}"
                 }), 200
+
     
         if any(x in msg for x in ["where", "location", "address"]):
                 return jsonify({
