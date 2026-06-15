@@ -981,19 +981,19 @@ def handle_chat():
     if CURRENT_EVENT:
 
         if any(x in msg for x in ["time", "start", "when"]):
-            return jsonify({
-                "message": f"{CURRENT_EVENT.get('title', 'That event')} starts at {format_event_time(CURRENT_EVENT.get('start_dt', ''))}."
-            }), 200
+                return jsonify({
+                    "message": f"{CURRENT_EVENT.get('title', 'That event')} starts at {format_event_time(CURRENT_EVENT.get('start_dt', ''))}."
+                }), 200
     
         if any(x in msg for x in ["where", "location", "address"]):
-            return jsonify({
-                "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {CURRENT_EVENT.get('location', 'Location not listed')}."
-            }), 200
+                return jsonify({
+                    "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {CURRENT_EVENT.get('location', 'Location not listed')}."
+                }), 200
     
         if any(x in msg for x in ["description", "details", "tell me more"]):
-            return jsonify({
-                "message": CURRENT_EVENT.get("description", "No additional details available.")
-            }), 200
+                return jsonify({
+                    "message": CURRENT_EVENT.get("description", "No additional details available.")
+                }), 200
 
 
     
