@@ -997,14 +997,11 @@ def handle_chat():
 
         if any(x in msg for x in ["directions", "get directions", "take me there", "map"]):
             location = CURRENT_EVENT.get("location", "")
-            maps_query = location.replace(" ", "+")
         
-            maps_url = f"https://www.google.com/maps/search/?api=1&query={maps_query}"
-
             return jsonify({
-                return jsonify({
-                    "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {location}.\n\nCopy this into Google Maps:\n{location}"
-                }), 200
+                "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {location}.\n\nCopy this into Google Maps:\n{location}"
+            }), 200
+
 
 
 
