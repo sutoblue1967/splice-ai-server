@@ -1800,6 +1800,33 @@ def chat():
 def el_chat_chat():
     return handle_chat()
 
+@app.get("/delete-adelphia")
+def delete_adelphia():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM events
+        WHERE source = 'The Adelphia'
+    """)
+    before = cur.fetchone()[0]
+
+    cur.execute("""
+        DELETE FROM events
+        WHERE source = 'The Adelphia'
+    """)
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        "deleted": before
+    })
+    
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "10000"))
     app.run(host="0.0.0.0", port=port)
