@@ -1002,8 +1002,10 @@ def handle_chat():
             maps_url = f"https://www.google.com/maps/search/?api=1&query={maps_query}"
 
             return jsonify({
-                "message": maps_url
-            }), 200
+                return jsonify({
+                    "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {location}.\n\nCopy this into Google Maps:\n{location}"
+                }), 200
+
 
 
     
