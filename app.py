@@ -1790,51 +1790,41 @@ def submit_event():
     PENDING_EVENTS.append(event)
     _cache["ts"] = 0
 
-    return jsonify({"ok": True, "event": event}), 200
+    return jsonify({"ok": True, "event": event}), 200  
+@app.get("/delete-adelphia")
+def delete_adelphia():
 
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-    @app.post("/chat")
-    def chat():
-        return handle_chat()
-    
-    
-    @app.post("/el-chat/chat")
-    def el_chat_chat():
-        return handle_chat()
-     @app.get("/delete-adelphia")
-    def delete_adelphia():
-    
-        conn = get_db_connection()
-        cur = conn.cursor()
-    
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM events
-            WHERE source = 'The Adelphia'
-        """)
-        count_before = cur.fetchone()[0]
-    
-        cur.execute("""
-            DELETE FROM events
-            WHERE source = 'The Adelphia'
-        """)
-    
-        conn.commit()
-    
-        cur.execute("""
-            SELECT COUNT(*)
-            FROM events
-            WHERE source = 'The Adelphia'
-        """)
-        count_after = cur.fetchone()[0]
-    
-        cur.close()
-        conn.close()
-    
-        return jsonify({
-            "deleted": count_before,
-            "remaining": count_after
-        })   
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM events
+        WHERE source = 'The Adelphia'
+    """)
+    count_before = cur.fetchone()[0]
+
+    cur.execute("""
+        DELETE FROM events
+        WHERE source = 'The Adelphia'
+    """)
+
+    conn.commit()
+
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM events
+        WHERE source = 'The Adelphia'
+    """)
+    count_after = cur.fetchone()[0]
+
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        "deleted": count_before,
+        "remaining": count_after
+    })
 
 
 if __name__ == "__main__":
