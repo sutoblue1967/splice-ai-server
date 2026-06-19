@@ -1039,7 +1039,7 @@ def handle_chat():
     else:
         lines = []
 
-        for e in scoped[:5]:
+        for e in scoped:
             title = e.get("title", "Untitled")
             location = e.get("location", "Location TBD")
             description = e.get("description", "")
