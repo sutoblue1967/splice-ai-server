@@ -44,7 +44,7 @@ def generate_ai_response(user_message, events, conversation_history=None):
 
         event_text = ""
 
-        for e in events[:5]:
+        for e in events:
             event_text += (
                 f"Title: {e.get('title', '')}\n"
                 f"Start: {format_event_time(e.get('start_dt', ''))}\n"
