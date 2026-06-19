@@ -85,7 +85,7 @@ Short one-line description if helpful
 Put a blank line between each event.
 
 Keep responses easy to scan on a phone.
-Only show 3 events unless the user asks for more.
+Show all relevant events.
 
 Do not combine multiple events into one sentence.
 Do not write giant paragraphs.
