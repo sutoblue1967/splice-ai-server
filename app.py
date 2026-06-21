@@ -133,8 +133,7 @@ Good response style:
 
         response = client.responses.create(
             model="gpt-5-mini",
-            input=prompt,
-            max_output_tokens=900
+            input=prompt
         )
 
         return response.output_text
