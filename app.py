@@ -131,9 +131,10 @@ Good response style:
 """
 
 
-        response = client.responses.create(
+       response = client.responses.create(
             model="gpt-5-mini",
-            input=prompt
+            input=prompt,
+            max_output_tokens=500
         )
 
         return response.output_text
