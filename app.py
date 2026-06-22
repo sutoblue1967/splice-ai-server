@@ -999,24 +999,37 @@ def handle_chat():
 
     if CURRENT_EVENT:
 
-        if any(x in msg for x in ["time", "start", "when"]):
-            dt = CURRENT_EVENT.get("start_dt", "")
-    
-            try:
-                pretty_time = datetime.fromisoformat(dt).strftime("%A, %B %d at %-I:%M %p").replace(" 0", " ")
-            except:
-                pretty_time = dt
-    
-            return jsonify({
-                "message": f"{CURRENT_EVENT.get('title', 'That event')} starts {pretty_time}."
-            }), 200
+    if any(x in msg for x in ["cost", "price", "ticket", "admission", "how much"]):
+        desc = CURRENT_EVENT.get("description", "")
+        title = CURRENT_EVENT.get("title", "That event")
 
-        if any(x in msg for x in ["directions", "get directions", "take me there", "map"]):
-            location = CURRENT_EVENT.get("location", "")
-        
-            return jsonify({
-                "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {location}.\n\nCopy this into Google Maps:\n{location}"
-            }), 200
+        return jsonify({
+            "message": f"{title}: {desc}"
+        }), 200
+
+    if any(x in msg for x in ["time", "start", "when"]):
+        dt = CURRENT_EVENT.get("start_dt", "")
+
+        try:
+            pretty_time = datetime.fromisoformat(dt).strftime("%A, %B %d at %-I:%M %p").replace(" 0", " ")
+        except:
+            pretty_time = dt
+
+        return jsonify({
+            "message": f"{CURRENT_EVENT.get('title', 'That event')} starts {pretty_time}."
+        }), 200
+
+    if any(x in msg for x in ["directions", "get directions", "take me there", "map"]):
+        location = CURRENT_EVENT.get("location", "")
+
+        return jsonify({
+            "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {location}.\n\nCopy this into Google Maps:\n{location}"
+        }), 200
+
+    if any(x in msg for x in ["where", "location", "address"]):
+        return jsonify({
+            "message": f"{CURRENT_EVENT.get('title', 'That event')} is at {CURRENT_EVENT.get('location', 'the listed location')}."
+        }), 200
 
 
 
