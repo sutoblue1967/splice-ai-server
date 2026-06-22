@@ -1108,9 +1108,13 @@ def handle_chat():
     reply = f"{intro}\n\n{reply_body}{outro}"
 
     CURRENT_EVENTS = scoped[:5]
-    
+
     if len(CURRENT_EVENTS) == 1:
         CURRENT_EVENT = CURRENT_EVENTS[0]
+    
+    if any(x in msg for x in ["tell me more", "more about", "details", "detail"]):
+        if scoped:
+            CURRENT_EVENT = scoped[0]
 
 
     # 🔥 AI LAYER (SAFE WRAPPED)
