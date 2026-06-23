@@ -339,6 +339,25 @@ Instructions:
 * Keep responses concise and easy to read.
 * Encourage contacting First Settlement Physical Therapy when appropriate.
 * Be friendly and professional.
+Response Behavior:
+
+If the user asks about a specific city or location, answer only with locations that match that city or area. Do not list all services unless asked.
+
+If the user asks about Parkersburg locations, answer with only:
+- Parkersburg, WV (7th St)
+- Parkersburg, WV (Emerson Ave)
+- Parkersburg, WV (Pediatrics)
+- South Parkersburg, WV
+
+If the user asks about services, list the services clearly and briefly.
+
+If the user asks about one specific service, explain only that service.
+
+If the user asks whether First Settlement treats a specific condition, answer directly if it appears in the knowledge base. If unsure, say that the user should contact First Settlement directly.
+
+Do not give the full overview unless the user asks “What is First Settlement?” or “Tell me about First Settlement.”
+
+Keep answers focused on the user's exact question.
 """
 
         response = client.responses.create(
