@@ -1467,6 +1467,7 @@ def handle_lumi_chat():
     return jsonify({
         "message": "Lumi is having a little trouble answering right now. Try again in a moment."
     }), 200
+
     
 @app.post("/fspt-chat")
 def handle_fspt_chat():
