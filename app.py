@@ -1241,7 +1241,20 @@ def handle_chat():
         print("AI wrapper error:", e)
     
     return jsonify({"message": reply}), 200
+    
+@app.post("/lumi-chat")
+def handle_lumi_chat():
+    data = request.get_json(silent=True) or {}
+    msg = data.get("message", "")
 
+    ai_reply = generate_lumi_response(msg)
+
+    if ai_reply:
+        return jsonify({"message": ai_reply}), 200
+
+    return jsonify({
+        "message": "Lumi is having a little trouble answering right now. Try again in a moment."
+    }), 200
     
 @app.get("/bulk-ingest")
 def bulk_ingest():
