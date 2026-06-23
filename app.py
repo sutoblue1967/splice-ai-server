@@ -1256,6 +1256,20 @@ def handle_lumi_chat():
         "message": "Lumi is having a little trouble answering right now. Try again in a moment."
     }), 200
     
+@app.post("/fspt-chat")
+def handle_fspt_chat():
+    data = request.get_json(silent=True) or {}
+    msg = data.get("message", "")
+
+    ai_reply = generate_fspt_response(msg)
+
+    if ai_reply:
+        return jsonify({"message": ai_reply}), 200
+
+    return jsonify({
+        "message": "The First Settlement Physical Therapy Assistant is having a little trouble answering right now. Try again in a moment."
+    }), 200
+
 @app.get("/bulk-ingest")
 def bulk_ingest():
     html = """
