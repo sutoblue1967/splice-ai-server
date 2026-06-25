@@ -545,6 +545,7 @@ Always end with an invitation such as:
 * “Want me to turn this into a simple script?”
 * “Would you like a practical next step or a deeper explanation?”
 * “Want to explore what this may be building in your child?”
+"""
 
 
         response = client.responses.create(
