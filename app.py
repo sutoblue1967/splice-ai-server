@@ -568,17 +568,17 @@ def load_events_from_db():
     cur = conn.cursor()
 
        cur.execute("""
-        CREATE TABLE IF NOT EXISTS events (
-            id SERIAL PRIMARY KEY,
-            title TEXT,
-            start_dt TEXT,
-            end_dt TEXT,
-            location TEXT,
-            source TEXT,
-            url TEXT,
-            category TEXT,
-            description TEXT
-        )
+            CREATE TABLE IF NOT EXISTS events (
+                id SERIAL PRIMARY KEY,
+                title TEXT,
+                start_dt TEXT,
+                end_dt TEXT,
+                location TEXT,
+                source TEXT,
+                url TEXT,
+                category TEXT,
+                description TEXT
+            )
     """)
 
     cur.execute("""
