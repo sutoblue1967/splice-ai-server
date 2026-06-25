@@ -567,6 +567,7 @@ def load_events_from_db():
     cur = conn.cursor()
 
     cur.execute("""
+        
         CREATE TABLE IF NOT EXISTS events (
             id SERIAL PRIMARY KEY,
             title TEXT,
